@@ -1,8 +1,8 @@
 namespace TestApp
 {
-    public partial class Form1 : Form
+    public partial class Main : Form
     {
-        public Form1()
+        public Main()
         {
             InitializeComponent();
         }
@@ -22,7 +22,7 @@ namespace TestApp
 
         private void Button5_Click(object sender, EventArgs e)
         {
-            Form6 form = new(this);
+            SettingsForm form = new(this);
 
             this.Hide();
             form.Show();

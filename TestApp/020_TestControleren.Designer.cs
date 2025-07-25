@@ -20,7 +20,7 @@
             base.Dispose(disposing);
         }
 
-        protected void showResultaten(List<string[]> spelerInfo)
+        protected void showResultaten(List<List<string>> spelerInfo)
         {
             if (spelerInfo == null)
                 return;
@@ -32,7 +32,7 @@
 
             int key = 0;
 
-            foreach (string[] info in spelerInfo)
+            foreach (List<string> info in spelerInfo)
             {
                 Label spelerNaamLabel = new System.Windows.Forms.Label();
                 Label antwoordenLabel = new System.Windows.Forms.Label();

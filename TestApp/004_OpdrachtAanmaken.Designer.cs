@@ -1,6 +1,6 @@
 ﻿namespace TestApp
 {
-    partial class Form3
+    partial class OpdrachtAanmakenForm
     {
         /// <summary>
         /// Required designer variable.
@@ -32,88 +32,55 @@
             textBox1 = new TextBox();
             button1 = new Button();
             button2 = new Button();
-            comboBox1 = new ComboBox();
-            label2 = new Label();
-            checkBox1 = new CheckBox();
             SuspendLayout();
             // 
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(12, 38);
+            label1.Location = new Point(12, 15);
             label1.Name = "label1";
-            label1.Size = new Size(40, 15);
+            label1.Size = new Size(87, 15);
             label1.TabIndex = 0;
-            label1.Text = "Vraag:";
+            label1.Text = "Opdrachtnaam";
             // 
             // textBox1
             // 
-            textBox1.Location = new Point(75, 35);
+            textBox1.Location = new Point(105, 12);
             textBox1.Name = "textBox1";
-            textBox1.Size = new Size(442, 23);
+            textBox1.Size = new Size(143, 23);
             textBox1.TabIndex = 1;
             // 
             // button1
             // 
-            button1.Location = new Point(12, 89);
+            button1.Location = new Point(12, 41);
             button1.Name = "button1";
-            button1.Size = new Size(505, 23);
+            button1.Size = new Size(236, 23);
             button1.TabIndex = 2;
-            button1.Text = "Toevoegen";
+            button1.Text = "Opslaan";
             button1.UseVisualStyleBackColor = true;
             button1.Click += Button1_Click;
             // 
             // button2
             // 
-            button2.Location = new Point(12, 118);
+            button2.Location = new Point(12, 70);
             button2.Name = "button2";
-            button2.Size = new Size(505, 23);
+            button2.Size = new Size(236, 23);
             button2.TabIndex = 3;
             button2.Text = "Terug";
             button2.UseVisualStyleBackColor = true;
             button2.Click += Button2_Click;
             // 
-            // comboBox1
-            // 
-            comboBox1.FormattingEnabled = true;
-            comboBox1.Location = new Point(75, 6);
-            comboBox1.Name = "comboBox1";
-            comboBox1.Size = new Size(442, 23);
-            comboBox1.TabIndex = 6;
-            // 
-            // label2
-            // 
-            label2.AutoSize = true;
-            label2.Location = new Point(12, 9);
-            label2.Name = "label2";
-            label2.Size = new Size(57, 15);
-            label2.TabIndex = 5;
-            label2.Text = "Opdracht";
-            // 
-            // checkBox1
-            // 
-            checkBox1.AutoSize = true;
-            checkBox1.Location = new Point(75, 64);
-            checkBox1.Name = "checkBox1";
-            checkBox1.Size = new Size(152, 19);
-            checkBox1.TabIndex = 8;
-            checkBox1.Text = "Antwoorden alfabetisch";
-            checkBox1.UseVisualStyleBackColor = true;
-            // 
-            // Form3
+            // OpdrachtAanmakenForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(529, 152);
-            Controls.Add(checkBox1);
-            Controls.Add(comboBox1);
-            Controls.Add(label2);
+            ClientSize = new Size(262, 106);
             Controls.Add(button2);
             Controls.Add(button1);
             Controls.Add(textBox1);
             Controls.Add(label1);
-            Name = "Form3";
-            Text = "Vraag toevoegen";
+            Name = "OpdrachtAanmakenForm";
+            Text = "Form7";
             FormClosing += CloseApplication;
             ResumeLayout(false);
             PerformLayout();
@@ -125,8 +92,5 @@
         private TextBox textBox1;
         private Button button1;
         private Button button2;
-        private ComboBox comboBox1;
-        private Label label2;
-        private CheckBox checkBox1;
     }
 }

@@ -13,79 +13,70 @@ namespace TestApp
     public partial class Form4 : Form
     {
         readonly Form previous;
-        readonly List<string>? questionsForCombobox;
-        readonly List<Questions>? questions;
-        readonly DataSetInfo? dsi;
+        readonly DataSetClass ds;
 
         public Form4(Form prev)
         {
-            this.dsi = Program.GetInfo();
-
-            this.questions = dsi.GetGameById(dsi.currentGame).GetQuestions();
-
             InitializeComponent();
 
-            if (questions != null)
+            previous = prev;
+            ds = Program.GetInfo();
+
+            AddOpdrachtenToCombobox();
+        }
+
+        public void AddOpdrachtenToCombobox()
+        {
+            List<string> opdrachten = ds.GetOpdrachtenClass().GetOpdrachten();
+
+            foreach (string opdracht in opdrachten)
             {
-                questionsForCombobox = new List<string>();
-                foreach (Questions question in questions)
-                {
-                    string? q = question.GetQuestion();
-                    if (q == null)
-                        continue;
-
-                    questionsForCombobox.Add(q);
-                }
-
-                comboBox1.Items.AddRange(questionsForCombobox.ToArray());
+                comboBox1.Items.Add(opdracht);
             }
 
-            previous = prev;
+        }
+
+        public void AddQuestionsToCombobox()
+        {
+            comboBox2.Items.Clear();
+
+            List<List<string>> questions = ds.GetQuestionsClass().GetAllQuestions();
+
+            string opdracht = comboBox1.Text;
+
+            foreach (List<string> question in questions)
+            {
+                if (question[0] == opdracht)
+                    comboBox2.Items.Add(question[1]);
+            }
+
         }
 
         private void Button1_Click(object sender, EventArgs e)
         {
-            if (questions == null)
+            string question = comboBox2.Text;
+            string opdracht = comboBox1.Text;
+            string antwoord = textBox1.Text;
+
+            if (antwoord == "")
                 return;
 
-            if (dsi == null)
+            if (opdracht == "")
                 return;
 
-            object selectedItem = comboBox1.SelectedItem;
-            if (selectedItem == null)
+            if (question == "")
                 return;
 
+            Antwoorden antwoordClass = ds.GetAntwoordenClass();
 
-            string option = textBox1.Text;
-            Questions? selectedQuestion;
+            if (antwoordClass.AntwoordAlreadyExists(opdracht, question, antwoord))
+                return;
 
-            foreach (Questions q in questions)
-            {
-                if (selectedItem.ToString() == q.GetQuestion())
-                {
-                    selectedQuestion = q;
-                    if (selectedQuestion != null)
-                    {
-                        List<Options>? allOptions = this.dsi.GetOptions();
-                        int counter = 0;
-                        if (allOptions != null)
-                            counter = allOptions.Count;
+            antwoordClass.AddAntwoord(opdracht, question, antwoord);
+            
+            textBox1.Text = "";
+            textBox1.Focus();
 
-                        Options o = new();
-                        o.SetValue(option);
-                        o.SetQuestion(selectedQuestion);
-                        o.SetId(counter);
-
-                        o.WriteToFile();
-                        this.dsi.AddToOptionList(o);
-
-                        textBox1.Text = "";
-                        textBox1.Focus();
-
-                        return;
-                    }
-                }
-            }
         }
 
         private void Button2_Click(object sender, EventArgs e)
@@ -97,6 +88,11 @@ namespace TestApp
         private void CloseApplication(object sender, FormClosingEventArgs e)
         {
             Application.Exit();
+        }
+
+        private void ComboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            AddQuestionsToCombobox();
         }
     }
 }

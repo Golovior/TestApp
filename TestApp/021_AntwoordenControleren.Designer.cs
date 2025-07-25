@@ -20,7 +20,7 @@
             base.Dispose(disposing);
         }
 
-        protected void showAntwoordenFromPlayer(List<string[]> info)
+        protected void showAntwoordenFromPlayer(List<List<string>> info)
         {
             if (info.Count == 0)
                 return;
@@ -32,7 +32,7 @@
 
             int key = 0;
 
-            foreach (string[] i in info)
+            foreach (List<string> i in info)
             {
                 Label vraagLabel = new System.Windows.Forms.Label();
                 Label antwoordLabel = new System.Windows.Forms.Label();
@@ -44,14 +44,14 @@
                 vraagLabel.Name = "labelVraag~" + Convert.ToString(key);
                 vraagLabel.Size = new System.Drawing.Size(355, 15);
                 vraagLabel.TabIndex = 0;
-                vraagLabel.Text = i[0];
+                vraagLabel.Text = i[3];
 
                 antwoordLabel.AutoSize = true;
                 antwoordLabel.Location = new System.Drawing.Point(361, labelHeight);
                 antwoordLabel.Name = "labelAntwoord~" + Convert.ToString(key);
                 antwoordLabel.Size = new System.Drawing.Size(200, 15);
                 antwoordLabel.TabIndex = 1;
-                antwoordLabel.Text = i[1];
+                antwoordLabel.Text = i[4];
 
                 this.vraagLabels.Add(vraagLabel);
                 this.antwoordLabels.Add(antwoordLabel);

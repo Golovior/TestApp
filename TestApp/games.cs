@@ -2,100 +2,76 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace TestApp
 {
-    public class Games
+    internal class Games
     {
-        protected int? id;
-        protected List<Players>? players;
-        protected List<Questions> questions;
-        protected string? name;
+        readonly List<string> appGames;
+        readonly string filePath;
+        readonly string fileName;
 
-        public Games ()
-        {
-            this.players = new List<Players>();
-            this.questions = new List<Questions>();
-        }
+        public Games() {
+            this.filePath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "/widmTest";
+            this.fileName = filePath + "/games.txt";
 
-        public int? GetId()
-        {
-            return this.id;
-        }
+            if (!Directory.Exists(filePath))
+                Directory.CreateDirectory(filePath);
 
-        public List<Players>? GetPlayers()
-        {
-            return this.players;
-        }
-
-        public string? GetName()
-        {
-            return this.name;
-        }
-
-        public void SetId(int? id)
-        {
-            this.id = id;
-        }
-
-        public void AddPlayers(Players player)
-        {
-            if (this.players == null)
-                this.players = new List<Players>();
-
-            this.players.Add(player);
-        }
-
-        public void RemovePlayer(Players player)
-        {
-            if (this.players == null)
-                return;
-
-            foreach(Players p in this.players)
+            if (!File.Exists(fileName))
             {
-                if(p.GetId() == player.GetId())
-                    this.players.Remove(p);
+                var createdFile = File.Create(fileName);
+                createdFile.Close();
             }
-        }
 
-        public void SetName(string? name)
-        {
-            this.name = name;
-        }
+            string json = File.ReadAllText(fileName);
 
-        public List<Questions>? GetQuestions()
-        {
-            return this.questions;
-        }
-
-        public void AddQuestion(Questions question)
-        {
-            if (this.questions == null)
-                this.questions = new List<Questions>();
-
-            this.questions.Add(question);
-        }
-
-        public void RemoveQuestion(Questions question)
-        {
-            if (this.questions == null)
-                return;
-
-            foreach (Questions q in this.questions)
+            if (json == null)
             {
-                if (q.GetId() == question.GetId())
-                    this.questions.Remove(q);
+                this.appGames = new();
+                return;
             }
+
+            this.appGames = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(json) ?? new();
         }
 
-        public void WriteToFile()
+        public bool GameAlreadyExists(string name) {
+            if (appGames.Contains(name))
+                return true;
+
+            return false;
+        }
+
+        public void AddGame(string name) {
+            appGames.Add(name);
+
+            this.SaveGames();
+        }
+
+        public string GetGameInfo()
         {
-            DataSetInfo dsi = Program.GetInfo();
+            string allGames = "[";
 
-            string line = this.GetId() + "~" + this.GetName();
+            foreach (string game in appGames) {
+                if (allGames.Length > 2)
+                    allGames += ",";
 
-            DataSetInfo.WriteInfo(dsi.fileGames, line);
+                allGames += "'" + game + "'";
+            }
+
+            allGames += "]";
+
+            return allGames;
         }
+
+        public void SaveGames()
+        {
+            string json = JsonSerializer.Serialize(appGames);
+            File.WriteAllText(fileName, json);
+        }
+
     }
 }

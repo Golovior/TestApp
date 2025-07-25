@@ -42,17 +42,25 @@ namespace TestApp
             f4.Show();
         }
 
+        private void CloseApplication(object sender, FormClosingEventArgs e)
+        {
+            Application.Exit();
+        }
+
         private void Button3_Click(object sender, EventArgs e)
         {
-            Form10 f10 = new(this);
+            JuistAntwoordSelecteren f10 = new(this);
 
             this.Hide();
             f10.Show();
         }
 
-        private void CloseApplication(object sender, FormClosingEventArgs e)
+        private void Button5_Click(object sender, EventArgs e)
         {
-            Application.Exit();
+            CombineSpelerAndAntwoordForm form = new(this);
+
+            this.Hide();
+            form.Show();
         }
     }
 }

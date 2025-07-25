@@ -13,31 +13,26 @@ namespace TestApp
     public partial class Form21 : Form
     {
         readonly Form prev;
-        readonly List<Tests>? tests;
-        readonly DataSetInfo dsi;
+        readonly DataSetClass ds;
 
         public Form21(Form previous)
         {
-            this.dsi = Program.GetInfo();
             this.prev = previous;
-
-            this.tests = dsi.GetTests();
+            ds = Program.GetInfo();
 
             InitializeComponent();
 
-            if (tests != null)
+            FillComboboxWithTests();
+
+        }
+
+        public void FillComboboxWithTests()
+        {
+            List<string> tests = ds.GetTestsClass().GetAllTests();
+
+            foreach (string test in tests)
             {
-                List<string> testsForCombobox = new();
-                foreach (Tests test in tests)
-                {
-                    string? t = test.GetName();
-                    if (t == null)
-                        continue;
-
-                    testsForCombobox.Add(t);
-                }
-
-                comboBox1.Items.AddRange(testsForCombobox.ToArray());
+                comboBox1.Items.Add(test);
             }
         }
 
@@ -49,113 +44,80 @@ namespace TestApp
 
         private void ChangeTest(object sender, EventArgs e)
         {
-            if (tests == null)
-                return;
-         
-            string testName = comboBox1.Text;
+            string test = comboBox1.Text;
 
-            List<Running>? runnings = dsi.GetRunnings();
-
-            if (runnings == null)
+            if (test == "")
                 return;
 
-            Tests? selectedTest = null;
+            TestAntwoorden testAntwoorden = ds.GetTestAntwoordenClass();
+            Antwoorden antwoorden = ds.GetAntwoordenClass();
 
-            foreach(Tests test in tests)
+            List<List<string>> gegevenAntwoorden = new();
+            List<string> spelers = new();
+
+            foreach (List<string> a in testAntwoorden.GetAllTestAntwoorden())
             {
-                if(test.GetName() == testName)
-                {
-                    selectedTest = test;
-                }
-            }
-
-            if (selectedTest == null)
-                return;
-
-            List<Running> testRunnings = new();
-
-            foreach(Running r in runnings)
-            {
-                Tests? testForRunning = r.GetTest();
-                if (testForRunning == null)
+                if (a[0] != test)
                     continue;
 
-                if (testForRunning.GetId() == selectedTest.GetId())
-                {
-                    testRunnings.Add(r);
-                }
+                gegevenAntwoorden.Add(a);
+                if (!spelers.Contains(a[1]))
+                    spelers.Add(a[1]);
             }
 
-            if (testRunnings.Count == 0)
-                return;
+            List<List<string>> juisteAntwoorden = new();
 
-            List<string[]> setVanSpelers = new();
-
-            foreach (Running r in testRunnings)
+            foreach(List<string> a in antwoorden.GetAntwoorden())
             {
-                List<Antwoorden>? antwoordenList = dsi.GetAntwoorden();
-
-                if (antwoordenList == null)
-                    return;
-
-                List<Antwoorden> gegevenAntwoorden = new();
-
-                foreach (Antwoorden antwoord in antwoordenList)
-                {
-                    Running? antwoordRunning = antwoord.GetRunning();
-
-                    if (antwoordRunning == null)
-                        continue;
-
-                    if (antwoordRunning.GetId() == r.GetId())
-                    {
-                        gegevenAntwoorden.Add(antwoord);
-                    }
-                }
-
-                Players? speler = r.GetPlayer();
-
-                if (speler == null)
-                    return;
-
-                string? spelerNaam = speler.GetName();
-
-                if (spelerNaam == null)
-                    return;
-
-                int? startTime = r.GetStartTime();
-                int? eindTime = r.GetEindTime();
-
-                if (startTime == null)
-                    return;
-
-                if (eindTime == null)
-                    return;
-
-                int timeSpend = (int)eindTime - (int)startTime;
-
-                string[] spelerInfo = new string[3];
-                spelerInfo[0] = spelerNaam;
-                spelerInfo[1] = "0";
-                spelerInfo[2] = Convert.ToString(timeSpend);
-
-                foreach(Antwoorden a in gegevenAntwoorden)
-                {
-                    if(a.CheckAntwoord())
-                    {
-                        spelerInfo[1] = Convert.ToString(Convert.ToInt32(spelerInfo[1]) + 1);
-                    }
-                }
-
-                setVanSpelers.Add(spelerInfo);
+                if (a[3] == "1")
+                    juisteAntwoorden.Add(a);
             }
 
-            this.showResultaten(setVanSpelers);
+            List<List<string>> score = new();
+
+            foreach(string speler in spelers)
+            {
+                List<string> spelerInfo = new()
+                {
+                    speler
+                };
+                int testScore = 0;
+                string timeSpend = "0";
+
+                foreach(List<string> antwoord in gegevenAntwoorden)
+                {
+                    if (antwoord[1] == speler)
+                    {
+                        foreach(List<string> ja in juisteAntwoorden)
+                        {
+                            if (ja[0] != antwoord[2])
+                                continue;
+
+                            if (ja[1] != antwoord[3])
+                                continue;
+
+                            if (ja[2] == antwoord[4])
+                                testScore++;
+                        }
+
+                        if (antwoord[2] == "einde Test" && antwoord[3] == "Tijd gespendeerd")
+                            timeSpend = antwoord[4];
+                    }
+                }
+
+                spelerInfo.Add(Convert.ToString(testScore));
+                spelerInfo.Add(timeSpend);
+
+                score.Add(spelerInfo);
+            }
+
+            showResultaten(score);
         }
 
         private void CloseApplication(object sender, FormClosingEventArgs e)
         {
-            Application.Exit();
+            this.Dispose();
+            this.prev.Show();
         }
     }
 }

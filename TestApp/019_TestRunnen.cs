@@ -13,30 +13,25 @@ namespace TestApp
     public partial class Form20 : Form
     {
         readonly Form prev;
-        readonly bool isRealTest;
-        Tests? test;
-        List<Questions>? questions;
-
-        readonly DataSetInfo dsi;
-
-        readonly Games currentGame;
-        Players? currentPlayer;
-        Questions? currentQuestion;
-
-        readonly int daySeconds;
-
-        Running? thisRun;
-        int nextQuestionId = 0;
-
-        public Form20(Form previous, bool realTest)
+        readonly DataSetClass ds;
+        readonly List<List<string>> questions = new();
+        readonly bool saveResult;
+        readonly string testName;
+        string speler = "";
+        int currentQuestion = 0;
+        
+        public Form20(Form previous, string testName, bool saveResult = false)
         {
             this.prev = previous;
-            this.isRealTest = realTest;
-            this.daySeconds = Convert.ToInt32(new DateTimeOffset(DateTime.Today).ToUnixTimeSeconds());
 
-            dsi = Program.GetInfo();
+            this.saveResult = saveResult;
 
-            currentGame = dsi.GetGameById(dsi.currentGame);
+            ds = Program.GetInfo();
+            this.testName = testName;
+
+            questions.Clear();
+
+            GetAllQuestionsForTest(testName);
 
             InitializeComponent();
 
@@ -46,141 +41,182 @@ namespace TestApp
             this.repositionElements();
         }
 
-        public void SetTest(Tests t)
+        private void GetAllQuestionsForTest(string testName)
         {
-            test = t;
-            questions = test.GetQuestions();
-            return;
+            List<List<string>> testVragen = ds.GetTestVragenClass().GetAllTestVragen();
+
+            foreach (List<string> tv in testVragen) {
+                if (tv[0] == testName)
+                    questions.Add(tv);
+            }
         }
 
         private void Button1_Click(object sender, EventArgs e)
         {
-            currentPlayer = null;
             string name = textBox1.Text;
 
-            if(textBox1.Text == "Exit")
+            if(name == "Exit")
             {
                 this.Dispose();
                 this.prev.Show();
             }
 
-            nextQuestionId = 0;
+            this.speler = name;
+            this.currentQuestion = 0;
+            label6.Text = DateTime.Now.ToString();
 
-            if (!isRealTest)
+            if (!false)
             {
                 this.ShowQuestionLayout();
                 this.Button2_Click(sender, e);
                 return;
             }
-
-            List<Players>? playersInGame = currentGame.GetPlayers();
-
-            if (playersInGame == null)
-                return;
-
-            foreach(Players p in playersInGame)
-            {
-                if (name == p.GetName())
-                    currentPlayer = p;
-            }
-
-            if (currentPlayer == null)
-                return;
-
-            List<Running>? allRunnings = dsi.GetRunnings();
-
-            int nextId = 0;
-            if (allRunnings != null)
-                nextId = allRunnings.Count;
-
-            thisRun = new Running();
-            thisRun.SetId(nextId);
-            thisRun.SetStartTime(Convert.ToInt32((DateTimeOffset.UtcNow.ToUnixTimeSeconds() - daySeconds) * 1000) + DateTimeOffset.UtcNow.Millisecond);
-            thisRun.SetPlayer(currentPlayer);
-            thisRun.SetTest(test);
-
-            thisRun.WriteToFile();
-            dsi.AddToRunningList(thisRun);
-
-            this.ShowQuestionLayout();
-
-            this.Button2_Click(sender, e);
         }
 
         private void Button2_Click(object sender, EventArgs e)
         {
-            if (questions == null || (thisRun == null && isRealTest))
-                return;
-
-            if (nextQuestionId > 0)
+            if(this.saveResult && currentQuestion > 0)
             {
-                if (radioButtons == null || currentQuestion == null)
+                bool succesvol = SaveAnswer();
+
+                if(!succesvol)
                     return;
+            }
 
-                List<Options>? optionsForQuestion = currentQuestion.GetOptions();
+            NextQuestion();
+        }
 
-                if (optionsForQuestion == null)
-                    return;
+        private bool SaveAnswer()
+        {
+            string currentQuestion = label3.Text;
+            TestAntwoorden testAntwoorden = ds.GetTestAntwoordenClass();
+            string antwoordKeuze = "";
+            string geselecteerdAntwoord = "";
 
-                Options selectedOption = new();
-
-                foreach(RadioButton r in radioButtons)
+            foreach (RadioButton rb in antwoordRBs)
+            {
+                if (rb.Checked)
                 {
-                    if(r.Checked)
+                    antwoordKeuze = rb.Name[6..];
+                }
+            }
+
+            if (antwoordKeuze == "")
+                return false;
+
+            foreach(Label al in antwoordLabels)
+            {
+                if (al.Name == "label~" + antwoordKeuze)
+                    geselecteerdAntwoord = al.Text;
+            }
+
+            if(geselecteerdAntwoord == "")
+                return false;
+
+            foreach (List<string> q in questions) {
+                if (q[2] != currentQuestion)
+                    continue;
+
+                if (testAntwoorden.AntwoordAlreadyExists(q[0], speler, q[1], q[2], geselecteerdAntwoord))
+                    return false;
+
+                testAntwoorden.AddTestAntwoord(q[0], speler, q[1], q[2], geselecteerdAntwoord);
+            }
+
+            return true;
+        }
+
+        private void NextQuestion()
+        {
+            currentQuestion++;
+            List<string> volgendeVraag = new();
+
+            foreach(List<string> question in questions)
+            {
+                if (question[3] != Convert.ToString(currentQuestion))
+                    continue;
+
+                volgendeVraag = question;
+            }
+
+            if(volgendeVraag.Count == 0)
+            {
+                EindeTest();
+                return;
+            }
+
+            List<List<string>> allPlayers = ds.GetSpelersClass().GetSpelers();
+            List<string> activePlayers = new();
+
+            foreach (List<string> speler in allPlayers)
+            {
+                if (speler[1] == "1")
+                    activePlayers.Add(speler[0]);
+            }
+
+            List<List<string>> antwoordMogelijkheden = new();
+            
+            foreach(List<string> a in ds.GetAntwoordenClass().GetAntwoorden())
+            {
+                if (a[0] != volgendeVraag[1])
+                    continue;
+
+                if (a[1] != volgendeVraag[2])
+                    continue;
+
+                if (a[4].Length > 4)
+                {
+                    List<string> pqo = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(a[4]) ?? new();
+
+                    bool answerNeeded = false;
+
+                    foreach(string p in pqo)
                     {
-                        foreach(Options o in optionsForQuestion)
-                        {
-                            if(o.GetValue() == r.Text)
-                            {
-                                selectedOption = o;
-                                break;
-                            }
-                        }
-                        break;
+                        if(activePlayers.Contains(p))
+                            answerNeeded = true;
                     }
+
+                    if (!answerNeeded)
+                        continue;
                 }
 
-                if (selectedOption.GetValue() == null)
-                    return;
-
-                if (isRealTest)
-                {
-                    int antwoordId = 0;
-
-                    List<Antwoorden>? alleAntwoorden = dsi.GetAntwoorden();
-
-                    if (alleAntwoorden != null)
-                        antwoordId = alleAntwoorden.Count;
-
-                    Antwoorden antwoord = new();
-                    antwoord.SetRunning(thisRun);
-                    antwoord.SetId(antwoordId);
-                    antwoord.SetOption(selectedOption);
-
-                    antwoord.WriteToFile();
-
-                    dsi.AddToAntwoordList(antwoord);
-                }
+                antwoordMogelijkheden.Add(a);
             }
 
-
-            if(nextQuestionId == questions.Count)
-            {
-                if(isRealTest && thisRun != null)
-                {
-                    thisRun.SetEindTime(Convert.ToInt32((DateTimeOffset.UtcNow.ToUnixTimeSeconds() - daySeconds) * 1000) + DateTimeOffset.UtcNow.Millisecond);
-                    thisRun.UpdateInFile();
-                }
-
-                this.ShowStartup();
+            if (antwoordMogelijkheden.Count == 0)
                 return;
+
+            Questions vragen = ds.GetQuestionsClass();
+            string alfabetisch = "1";
+
+            foreach(List<string> v in vragen.GetAllQuestions())
+            {
+                if (v[0] != volgendeVraag[1])
+                    continue;
+
+                if (v[1] != volgendeVraag[2])
+                    continue;
+
+                alfabetisch = v[2];
             }
 
-            currentQuestion = questions[nextQuestionId];
+            ShowNextQuestion(currentQuestion, volgendeVraag[2], antwoordMogelijkheden, alfabetisch);
+        }
 
-            nextQuestionId++;
+        private void EindeTest()
+        {
+            TestAntwoorden testAntwoorden = ds.GetTestAntwoordenClass();
 
-            this.PrepNextQuestion(currentQuestion);
+            DateTime starttime = DateTime.Parse(label6.Text);
+            DateTime endTime = DateTime.Now;
+
+            TimeSpan span = endTime - starttime;
+
+            string ms = Convert.ToString(span.TotalSeconds);
+
+            testAntwoorden.AddTestAntwoord(testName, speler, "einde Test", "Tijd gespendeerd", ms);
+
+            ShowStartup();
         }
 
         public void ShowStartup()
@@ -223,62 +259,6 @@ namespace TestApp
             label1.Visible = false;
             label4.Visible = false;
             textBox1.Visible = false;
-        }
-
-        public void PrepNextQuestion(Questions question)
-        {
-            panel1.Controls.Clear();
-            panel2.Controls.Clear();
-
-            label2.Text = Convert.ToString(nextQuestionId);
-            label3.Text = question.GetQuestion();
-
-            List<Options>? options = question.GetOptions();
-
-            if (options == null)
-                return;
-
-            List<Players>? allPlayers = currentGame.GetPlayers();
-            List<Players> activePlayers = new();
-
-            if (allPlayers == null)
-                return;
-
-            foreach (Players player in allPlayers)
-            {
-                if(player.GetStatus() == "Actief")
-                    activePlayers.Add(player);
-            }
-
-            List<Options> activeOptions = new();
-
-            foreach (Options option in options)
-            {
-                bool hasOption = false;
-                List<Players>? playersForOption = option.GetPlayers();
-
-                if (playersForOption == null)
-                    continue;
-
-                foreach(Players p in playersForOption)
-                {
-                    foreach(Players ap in activePlayers)
-                    {
-                        if(ap.GetId() == p.GetId() && !hasOption)
-                        {
-                            hasOption = true;
-                            activeOptions.Add(option);
-                        }
-                    }
-                }
-            }
-
-            if (activeOptions.Count == 0)
-                throw new Exception("Er zijn geen antwoorden voor deze vraag.");
-
-            this.prepareQuestion(activeOptions);
-
-            return;
         }
 
         private void CloseApplication(object sender, FormClosingEventArgs e)

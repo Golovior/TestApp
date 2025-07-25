@@ -1,99 +1,100 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace TestApp
 {
-    public class Questions
+    internal class Questions
     {
-        protected int? id;
-        protected Games? game;
-        protected string? question;
-        protected List<Options>? options;
+        readonly List<List<string>> appQuestions;
+        readonly string filePath;
+        readonly string fileName;
 
-        public Questions()
-        {
-            this.options = new List<Options>();
-        }
+        public Questions() {
+            this.filePath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "/widmTest";
+            this.fileName = filePath + "/questions.txt";
 
-        public int GetId()
-        {
-            if (id == null)
-                throw new Exception("This should not be possible....");
+            if (!Directory.Exists(filePath))
+                Directory.CreateDirectory(filePath);
 
-            return (int) id;
-        }
-
-        public Games GetGame()
-        {
-            if (this.game == null)
-                throw new Exception("Expected a game. Null available.");
-
-            return this.game;
-        }
-
-        public Games? GetGameOrNull()
-        {
-            return this.game;
-        }
-
-        public string? GetQuestion()
-        {
-            return this.question;
-        }
-
-        public List<Options>? GetOptions()
-        {
-            return this.options;
-        }
-
-        public void SetId(int? id)
-        {
-            this.id = id;
-        }
-
-        public void SetGame(Games? game)
-        {
-            this.game = game;
-            if (game != null)
-                game.AddQuestion(this);
-        }
-
-        public void SetQuestion(string? question)
-        {
-            this.question = question;
-        }
-
-        public void AddOptions(Options option)
-        {
-            if (this.options == null)
-                this.options = new List<Options>();
-
-            this.options.Add(option);
-        }
-
-        public void RemoveOption(Options option)
-        {
-            if (this.options == null)
-                return;
-
-            foreach (Options o in this.options)
+            if (!File.Exists(fileName))
             {
-                if (o.GetId() == option.GetId())
-                    this.options.Remove(o);
+                var createdFile = File.Create(fileName);
+                createdFile.Close();
             }
+
+            string json = File.ReadAllText(fileName);
+
+            if (json == null)
+            {
+                this.appQuestions = new();
+                return;
+            }
+
+            this.appQuestions = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(json) ?? new();
         }
 
-        public void WriteToFile()
+        public bool QuestionAlreadyExists(string opdracht, string question, string alphabetical) {
+            List<string> currentQuestion = new()
+            {
+                opdracht,
+                question,
+                alphabetical
+            };
+
+            if (appQuestions.Contains(currentQuestion))
+                return true;
+
+            return false;
+        }
+
+        public List<List<string>> GetAllQuestions()
         {
-            DataSetInfo dsi = Program.GetInfo();
-
-            string line = this.GetId() + "~" + this.GetGame().GetId() + "~" + this.GetQuestion();
-
-            DataSetInfo.WriteInfo(dsi.fileQuestions, line);
-            
+            return this.appQuestions;
         }
+
+        public void AddQuestion(string opdracht, string question, string alphabetical) {
+            List<string> currentQuestion = new()
+            {
+                opdracht,
+                question,
+                alphabetical
+            };
+
+            appQuestions.Add(currentQuestion);
+
+            this.SaveQuestions();
+        }
+
+        public string GetQuestionInfo()
+        {
+            string allQuestions = "[";
+
+            foreach (List<string> questions in appQuestions) {
+                if(questions.Count < 2)
+                    continue;
+
+                if (allQuestions.Length > 2)
+                    allQuestions += ",";
+
+                allQuestions += "['" + questions[0] + "','" + questions[1] + "','" + questions[2] + "']";
+            }
+
+            allQuestions += "]";
+
+            return allQuestions;
+        }
+
+        public void SaveQuestions()
+        {
+            string json = JsonSerializer.Serialize(appQuestions);
+            File.WriteAllText(fileName, json);
+        }
+
     }
 }

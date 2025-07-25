@@ -1,6 +1,6 @@
 ﻿namespace TestApp
 {
-    partial class Form7
+    partial class SpelAanmakenForm
     {
         /// <summary>
         /// Required designer variable.

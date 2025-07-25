@@ -13,39 +13,25 @@ namespace TestApp
     public partial class Form19 : Form
     {
         readonly Form prev;
-        readonly List<Tests>? tests;
-        readonly DataSetInfo dsi;
+        readonly DataSetClass ds;
 
-        readonly bool isRealTest;
-
-        public Form19(Form previous, bool realTest)
+        public Form19(Form previous)
         {
-            this.dsi = Program.GetInfo();
             prev = previous;
-            isRealTest = realTest;
-
-            this.tests = dsi.GetTests();
+            ds = Program.GetInfo();
 
             InitializeComponent();
 
-            if(!realTest)
+            FillComboboxWithTests();
+        }
+
+        public void FillComboboxWithTests()
+        {
+            List<string> tests = ds.GetTestsClass().GetAllTests();
+
+            foreach (string test in tests)
             {
-                button1.Text = "Test Controleren";
-            }
-
-            if (tests != null)
-            {
-                List<string> testsForCombobox = new();
-                foreach (Tests test in tests)
-                {
-                    string? t = test.GetName();
-                    if (t == null)
-                        continue;
-
-                    testsForCombobox.Add(t);
-                }
-
-                comboBox1.Items.AddRange(testsForCombobox.ToArray());
+                comboBox1.Items.Add(test);
             }
         }
 
@@ -57,34 +43,21 @@ namespace TestApp
 
         private void Button1_Click(object sender, EventArgs e)
         {
-            string testName = comboBox1.Text;
-
-            if (testName == "")
+            if (comboBox1.Text == "")
                 return;
 
-            if (tests == null)
-                return;
+            string test = comboBox1.Text;
 
-            foreach(Tests t in tests)
-            {
-                if(t.GetName() == testName)
-                {
-                    Form20 testForm = new(this, isRealTest);
-                    testForm.SetTest(t);
+            Form20 form = new(this, test, true);
 
-                    this.Hide();
-                    testForm.Show();
-
-                    testForm.repositionElements();
-
-                    return;
-                }
-            }
+            this.Hide();
+            form.Show();
         }
 
         private void CloseApplication(object sender, FormClosingEventArgs e)
         {
-            Application.Exit();
+            this.Dispose();
+            prev.Show();
         }
     }
 }

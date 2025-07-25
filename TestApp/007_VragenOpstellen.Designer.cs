@@ -28,66 +28,77 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.button1 = new System.Windows.Forms.Button();
-            this.button2 = new System.Windows.Forms.Button();
-            this.button4 = new System.Windows.Forms.Button();
-            this.button3 = new System.Windows.Forms.Button();
-            this.SuspendLayout();
+            button1 = new Button();
+            button2 = new Button();
+            button4 = new Button();
+            button3 = new Button();
+            button5 = new Button();
+            SuspendLayout();
             // 
             // button1
             // 
-            this.button1.Location = new System.Drawing.Point(12, 12);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(230, 23);
-            this.button1.TabIndex = 0;
-            this.button1.Text = "Nieuwe vragen maken";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.Button1_Click);
+            button1.Location = new Point(12, 12);
+            button1.Name = "button1";
+            button1.Size = new Size(230, 23);
+            button1.TabIndex = 0;
+            button1.Text = "Nieuwe vragen maken";
+            button1.UseVisualStyleBackColor = true;
+            button1.Click += Button1_Click;
             // 
             // button2
             // 
-            this.button2.Location = new System.Drawing.Point(12, 41);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(230, 23);
-            this.button2.TabIndex = 1;
-            this.button2.Text = "Antwoordmogelijkheden toevoegen";
-            this.button2.UseVisualStyleBackColor = true;
-            this.button2.Click += new System.EventHandler(this.Button2_Click);
+            button2.Location = new Point(12, 41);
+            button2.Name = "button2";
+            button2.Size = new Size(230, 23);
+            button2.TabIndex = 1;
+            button2.Text = "Antwoordmogelijkheden toevoegen";
+            button2.UseVisualStyleBackColor = true;
+            button2.Click += Button2_Click;
             // 
             // button4
             // 
-            this.button4.Location = new System.Drawing.Point(12, 99);
-            this.button4.Name = "button4";
-            this.button4.Size = new System.Drawing.Size(230, 23);
-            this.button4.TabIndex = 3;
-            this.button4.Text = "Terug";
-            this.button4.UseVisualStyleBackColor = true;
-            this.button4.Click += new System.EventHandler(this.Button4_Click);
+            button4.Location = new Point(12, 128);
+            button4.Name = "button4";
+            button4.Size = new Size(230, 23);
+            button4.TabIndex = 3;
+            button4.Text = "Terug";
+            button4.UseVisualStyleBackColor = true;
+            button4.Click += Button4_Click;
             // 
             // button3
             // 
-            this.button3.Location = new System.Drawing.Point(10, 70);
-            this.button3.Name = "button3";
-            this.button3.Size = new System.Drawing.Size(230, 23);
-            this.button3.TabIndex = 4;
-            this.button3.Text = "Antwoorden koppelen";
-            this.button3.UseVisualStyleBackColor = true;
-            this.button3.Click += new System.EventHandler(this.Button3_Click);
+            button3.Location = new Point(12, 99);
+            button3.Name = "button3";
+            button3.Size = new Size(230, 23);
+            button3.TabIndex = 4;
+            button3.Text = "Juist antwoord selecteren";
+            button3.UseVisualStyleBackColor = true;
+            button3.Click += Button3_Click;
+            // 
+            // button5
+            // 
+            button5.Location = new Point(12, 70);
+            button5.Name = "button5";
+            button5.Size = new Size(230, 23);
+            button5.TabIndex = 5;
+            button5.Text = "Antwoorden koppelen";
+            button5.UseVisualStyleBackColor = true;
+            button5.Click += Button5_Click;
             // 
             // Form2
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(252, 135);
-            this.Controls.Add(this.button3);
-            this.Controls.Add(this.button4);
-            this.Controls.Add(this.button2);
-            this.Controls.Add(this.button1);
-            this.Name = "Form2";
-            this.Text = "Vragen opstellen";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.CloseApplication);
-            this.ResumeLayout(false);
-
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(252, 160);
+            Controls.Add(button5);
+            Controls.Add(button3);
+            Controls.Add(button4);
+            Controls.Add(button2);
+            Controls.Add(button1);
+            Name = "Form2";
+            Text = "Vragen opstellen";
+            FormClosing += CloseApplication;
+            ResumeLayout(false);
         }
 
         #endregion
@@ -96,5 +107,6 @@
         private Button button2;
         private Button button4;
         private Button button3;
+        private Button button5;
     }
 }

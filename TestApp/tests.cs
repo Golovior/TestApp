@@ -2,110 +2,84 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace TestApp
 {
-    public class Tests
+    internal class Tests
     {
-        protected int? id;
-        protected List<Questions> questions;
-        protected string? name;
+        readonly List<string> appTests;
+        readonly string filePath;
+        readonly string fileName;
 
         public Tests()
         {
-            this.questions = new List<Questions>();
-        }
+            this.filePath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "/widmTest";
+            this.fileName = filePath + "/tests.txt";
 
-        public int? GetId()
-        {
-            return this.id;
-        }
+            if (!Directory.Exists(filePath))
+                Directory.CreateDirectory(filePath);
 
-        public string? GetName()
-        {
-            return this.name;
-        }
-
-        public void SetId(int? id)
-        {
-            this.id = id;
-        }
-
-        public void SetName(string? name)
-        {
-            this.name = name;
-        }
-
-        public List<Questions>? GetQuestions()
-        {
-            return this.questions;
-        }
-
-        public void AddQuestion(Questions question)
-        {
-            if (this.questions == null)
-                this.questions = new List<Questions>();
-
-            this.questions.Add(question);
-        }
-
-        public void RemoveQuestion(Questions question)
-        {
-            if (this.questions == null)
-                return;
-
-            foreach (Questions q in this.questions)
+            if (!File.Exists(fileName))
             {
-                if (q.GetId() == question.GetId())
-                {
-                    this.questions.Remove(q);
-                    break;
-                }
-            }
-        }
-
-        public void WriteToFile()
-        {
-            DataSetInfo dsi = Program.GetInfo();
-
-            string line = this.InfoForFile();
-
-            DataSetInfo.WriteInfo(dsi.fileTests, line);
-        }
-
-        public void UpdateInFile(string? questionLine = null)
-        {
-            DataSetInfo dsi = Program.GetInfo();
-            string line = this.InfoForFile(questionLine);
-
-            if (this.id == null)
-                return;
-
-            int index = DataSetInfo.GetLineById(dsi.fileTests, (int)this.id);
-
-            DataSetInfo.UpdateLine(dsi.fileTests, line, index);
-        }
-
-        private string InfoForFile(string? questionLine = null)
-        {
-            if(questionLine == null)
-            {
-                questionLine = "";
-
-                if (this.questions != null)
-                {
-                    foreach (Questions q in this.questions)
-                    {
-                        if (questionLine.Length > 0)
-                            questionLine += ',';
-
-                        questionLine += Convert.ToString(q.GetId());
-                    }
-                }
+                var createdFile = File.Create(fileName);
+                createdFile.Close();
             }
 
-            return this.GetId() + "~" + this.GetName() + "~" + questionLine;
+            string json = File.ReadAllText(fileName);
+
+            if (json == null)
+            {
+                this.appTests = new();
+                return;
+            }
+
+            this.appTests = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(json) ?? new();
+        }
+
+        public bool TestAlreadyExists(string test)
+        {
+            if (appTests.Contains(test))
+                return true;
+
+            return false;
+        }
+
+        public List<string> GetAllTests()
+        {
+            return this.appTests;
+        }
+
+        public void AddTest(string test)
+        {
+
+            appTests.Add(test);
+
+            this.SaveTests();
+        }
+
+        public string GetTestInfo()
+        {
+            string allTests = "[";
+
+            foreach (string test in appTests)
+            {
+                if (allTests.Length > 2)
+                    allTests += ",";
+
+                allTests += "'" + test + "'";
+            }
+
+            allTests += "]";
+
+            return allTests;
+        }
+
+        public void SaveTests()
+        {
+            string json = JsonSerializer.Serialize(appTests);
+            File.WriteAllText(fileName, json);
         }
     }
 }

@@ -2,86 +2,141 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace TestApp
 {
-    public class Antwoorden
+    internal class Antwoorden
     {
-        int? id;
-        Running? running;
-        Options? option;
+        List<List<string>> appAntwoorden;
+        readonly string filePath;
+        readonly string fileName;
 
-        public void SetId(int? id)
+        public Antwoorden()
         {
-            this.id = id;
-        }
+            this.filePath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "/widmTest";
+            this.fileName = filePath + "/antwoorden.txt";
 
-        public void SetRunning(Running? running)
-        {
-            this.running = running;
-        }
+            if (!Directory.Exists(filePath))
+                Directory.CreateDirectory(filePath);
 
-        public void SetOption(Options? option)
-        {
-            this.option = option;
-        }
-
-        public int GetId()
-        {
-            if (this.id == null)
-                throw new Exception("Er moet een id voor een antwoord gezet zijn.");
-
-            return (int) this.id;
-        }
-
-        public Running GetRunning()
-        {
-            if (this.running == null)
-                throw new Exception("Er moet een running voor een antwoord gezet zijn.");
-
-            return this.running;
-        }
-
-        public Options GetOption()
-        {
-            if (this.option == null)
-                throw new Exception("Er moet een option voor een antwoord gezet zijn.");
-
-            return this.option;
-        }
-
-        public bool CheckAntwoord()
-        {
-            if (option == null)
-                return false;
-
-            List<Players>? playersByOption = option.GetPlayers();
-
-            if (playersByOption == null)
-                return false;
-
-            DataSetInfo dsi = Program.GetInfo();
-
-            foreach(Players p in playersByOption)
+            if (!File.Exists(fileName))
             {
-                if(p.GetId() == dsi.mole)
-                {
-                    return true;
-                }
+                var createdFile = File.Create(fileName);
+                createdFile.Close();
+            }
+
+            string json = File.ReadAllText(fileName);
+
+            if (json == null)
+            {
+                this.appAntwoorden = new();
+                return;
+            }
+
+            this.appAntwoorden = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(json) ?? new();
+        }
+
+        public List<List<string>> GetAntwoorden()
+        {
+            return this.appAntwoorden;
+        }
+
+        public bool AntwoordAlreadyExists(string opdracht, string vraag, string name)
+        {
+            foreach (List<string> antwoord in this.appAntwoorden)
+            {
+                if (opdracht != antwoord[0])
+                    continue;
+
+                if (vraag != antwoord[1])
+                    continue;
+
+                if (name != antwoord[2])
+                    continue;
+
+                return true;
             }
 
             return false;
         }
 
-        public void WriteToFile()
+        public void AddAntwoord(string opdracht, string vraag, string name, string correct = "0")
         {
-            DataSetInfo dsi = Program.GetInfo();
+            List<string> antwoord = new()
+            {
+                opdracht,
+                vraag,
+                name,
+                correct,
+                "[]"
+            };
 
-            string line = this.GetId() + "~" + this.GetRunning().GetId() + "~" + this.GetOption().GetId();
+            appAntwoorden.Add(antwoord);
 
-            DataSetInfo.WriteInfo(dsi.fileAntwoorden, line);
+            this.SaveAntwoorden();
+        }
 
+        public string GetAntwoordenInfo()
+        {
+            string allAntwoorden = "[";
+
+            foreach (List<string> antwoordSet in appAntwoorden)
+            {
+                if (allAntwoorden.Length > 2)
+                    allAntwoorden += ",";
+
+                allAntwoorden+= "['" + antwoordSet[0] + "','" + antwoordSet[1] + "','" + antwoordSet[2] + "','" + antwoordSet[3] + "','" + antwoordSet[4] + "']";
+            }
+
+            allAntwoorden += "]";
+
+            return allAntwoorden;
+        }
+
+        public void SetAsCorrectAntwoord(string opdracht, string vraag, string name)
+        {
+            foreach (List<string> antwoordSet in appAntwoorden)
+            {
+                if (antwoordSet[0] == opdracht && antwoordSet[1] == vraag)
+                {
+                    if (name == antwoordSet[2])
+                        antwoordSet[3] = "1";
+                    else
+                        antwoordSet[3] = "0";
+                }
+            }
+
+            SaveAntwoorden();
+        }
+
+        public void ConnectPlayersToAnswer(string opdracht, string vraag, string antwoord, List<string> spelers)
+        {
+            string connectedPlayers = JsonSerializer.Serialize(spelers);
+
+            foreach (List<string> antwoordSet in appAntwoorden)
+            {
+                if (antwoordSet[0] == opdracht && antwoordSet[1] == vraag && antwoordSet[2] == antwoord)
+                {
+                    antwoordSet[4] = connectedPlayers;
+                }
+            }
+
+            SaveAntwoorden();
+        }
+
+        public void SaveAntwoorden()
+        {
+            string json = JsonSerializer.Serialize(appAntwoorden);
+            File.WriteAllText(fileName, json);
+        }
+
+        public void UpdateFromApi(string data)
+        {
+            appAntwoorden = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(data) ?? new();
+            File.WriteAllText(fileName, data);
         }
     }
 }

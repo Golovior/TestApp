@@ -13,13 +13,14 @@ namespace TestApp
     public partial class Form13 : Form
     {
         readonly Form prev;
-        readonly DataSetInfo dsi;
+        readonly DataSetClass ds;
 
         public Form13(Form previous)
         {
             InitializeComponent();
             prev = previous;
-            dsi = Program.GetInfo();
+
+            ds = Program.GetInfo();
         }
 
         private void Button2_Click(object sender, EventArgs e)
@@ -33,18 +34,14 @@ namespace TestApp
             if (textBox1.Text == "")
                 return;
 
-            List<Tests>? testsMade = dsi.GetTests();
+            string test = textBox1.Text;
 
-            int id = 0;
-            if(testsMade != null)
-                id = testsMade.Count;
+            Tests tests = ds.GetTestsClass();
 
-            Tests test = new();
-            test.SetName(textBox1.Text);
-            test.SetId(id);
+            if (tests.TestAlreadyExists(test))
+                return;
 
-            test.WriteToFile();
-            dsi.AddToTestList(test);
+            tests.AddTest(test);
 
             textBox1.Text = "";
             textBox1.Focus();

@@ -13,52 +13,17 @@ namespace TestApp
     public partial class Form14 : Form
     {
         readonly Form prev;
-        readonly List<Tests>? tests;
-        readonly List<Questions>? questions;
-        readonly DataSetInfo? dsi;
-
-        Tests? selectedTest;
-        List<Questions>? testQuestions;
+        readonly DataSetClass ds;
 
         public Form14(Form previous)
         {
-            this.dsi = Program.GetInfo();
-
             InitializeComponent();
             prev = previous;
 
-            this.tests = dsi.GetTests();
-            this.questions = dsi.GetQuestions();
+            ds = Program.GetInfo();
 
-            if (tests != null)
-            {
-                List<string> testsForCombobox = new();
-                foreach (Tests test in tests)
-                {
-                    string? t = test.GetName();
-                    if (t == null)
-                        continue;
-
-                    testsForCombobox.Add(t);
-                }
-
-                comboBox1.Items.AddRange(testsForCombobox.ToArray());
-            }
-
-            if (questions != null)
-            {
-                List<string> questionsForCombobox = new();
-                foreach (Questions question in questions)
-                {
-                    string? q = question.GetQuestion();
-                    if (q == null)
-                        continue;
-
-                    questionsForCombobox.Add(q);
-                }
-
-                comboBox2.Items.AddRange(questionsForCombobox.ToArray());
-            }
+            AddTestsToCombobox();
+            AddOpdrachtenToCombobox();
 
         }
 
@@ -68,98 +33,99 @@ namespace TestApp
             prev.Show();
         }
 
-        private void ChangeTest(object sender, EventArgs e)
+        private void AddTestsToCombobox()
         {
-            if (tests == null)
+            List<string> tests = this.ds.GetTestsClass().GetAllTests();
+
+            foreach (string test in tests)
+                comboBox1.Items.Add(test);
+
+        }
+
+        private void AddOpdrachtenToCombobox()
+        {
+            List<string> opdrachten = this.ds.GetOpdrachtenClass().GetOpdrachten();
+
+            foreach (string opdracht in opdrachten)
+                comboBox2.Items.Add(opdracht);
+
+        }
+
+        private void TestChange(object sender, EventArgs e)
+        {
+            label4.Text = "0";
+
+            string test = comboBox1.Text;
+            
+            if (test == "")
                 return;
 
-            string testValue = comboBox1.Text;
-            
-            foreach (Tests t in this.tests)
+            TestVragen testVragen = ds.GetTestVragenClass();
+
+            List<List<string>> alleTestVragen = testVragen.GetAllTestVragen();
+            int alToegevoegdeVragen = 0;
+
+            foreach(List<string> vragen in alleTestVragen)
             {
-                if (t.GetName() == testValue)
-                {
-                    this.selectedTest = t;
-                    break;
-                }
+                if (vragen[0] == test)
+                    alToegevoegdeVragen++;
             }
 
-            if (this.selectedTest == null)
+            label4.Text = Convert.ToString(alToegevoegdeVragen);
+        }
+
+        private void OpdrachtChange(object sender, EventArgs e)
+        {
+            comboBox3.Items.Clear();
+
+            string opdracht = comboBox2.Text;
+
+            if (opdracht == "")
                 return;
 
-            this.testQuestions = this.selectedTest.GetQuestions();
+            List<List<string>> vragen = this.ds.GetQuestionsClass().GetAllQuestions();
 
-            if (this.testQuestions == null)
-                return;
+            foreach (List<string> vraag in vragen)
+            {
+                if (vraag[0] == opdracht)
+                    comboBox3.Items.Add(vraag[1]);
+            }
 
-            int numberOfQuestions = this.testQuestions.Count;
-
-            label4.Text = Convert.ToString(numberOfQuestions);
         }
 
         private void Button1_Click(object sender, EventArgs e)
         {
-            if (this.selectedTest == null)
+            string test = comboBox1.Text;
+            string opdracht = comboBox2.Text;
+            string vraag = comboBox3.Text;
+            string amount = label4.Text;
+
+            if (test == "")
                 return;
 
-            if (this.questions == null)
+            if (opdracht == "")
                 return;
 
-            string questionSelectedValue = comboBox2.Text;
-
-            if (questionSelectedValue == "")
+            if (vraag == "")
                 return;
 
-            Questions questionSelected = new();
-            
-            foreach(Questions q in questions)
-            {
-                if (q.GetQuestion() == questionSelectedValue)
-                {
-                    questionSelected = q;
-                    break;
-                }
-            }
+            TestVragen testVragen = ds.GetTestVragenClass();
 
-            if (questionSelected.GetQuestion() == null)
+            if (testVragen.QuestionAlreadyExists(test, opdracht, vraag))
                 return;
 
-            if (this.testQuestions != null)
-            {
-                foreach (Questions q in this.testQuestions)
-                {
-                    if (questionSelected.GetId() == q.GetId())
-                        return;
-                }
-            }
+            int iAmount = Convert.ToInt32(amount);
 
-            selectedTest.AddQuestion(questionSelected);
+            iAmount++;
 
-            selectedTest.UpdateInFile();
-            comboBox2.Text = "";
+            amount = Convert.ToString(iAmount);
 
-            List<Questions>? testQuestionsSelected = this.selectedTest.GetQuestions();
+            testVragen.AddTestVraag(test, opdracht, vraag, amount);
 
-            if (testQuestionsSelected == null)
-                throw new Exception("Er zou een vraag toegevoegd moeten zijn!!");
+            comboBox3.Text = "";
 
-            label4.Text = Convert.ToString(testQuestionsSelected.Count);
-        }
+            label4.Text = amount;
 
-        private void Button2_Click(object sender, EventArgs e)
-        {
-            if (this.selectedTest == null)
-                return;
-
-            int? id = selectedTest.GetId();
-
-            if (id == null)
-                return;
-
-            Form15 form = new(this, Convert.ToInt32(id));
-
-            this.Hide();
-            form.Show();
         }
 
         private void CloseApplication(object sender, FormClosingEventArgs e)

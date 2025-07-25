@@ -28,7 +28,7 @@ namespace TestApp
 
         private void Button1_Click(object sender, EventArgs e)
         {
-            Form19 form = new(this, true);
+            Form19 form = new(this);
 
             this.Hide();
             form.Show();

@@ -98,43 +98,29 @@
 
         }
 
-        private void updateElements(Tests test)
+        private void updateElements()
         {
             this.buttonsUp.Clear();
             this.buttonsDown.Clear();
             this.labels.Clear();
 
-            List<Questions> questions = test.GetQuestions();
             this.panel1.Controls.Clear();
 
-            if (questions == null)
-                return;
-
-            int id = 1;
-
-            foreach (Questions q in questions)
-            {
-                if (q.GetQuestion() == "")
-                    continue;
-
-                this.makeQuestionRow(id, q);
-                id++;
-            }
         }
 
-        private void makeQuestionRow(int id, Questions q)
+        private void MakeQuestionRow(List<string> vraag)
         {
             Button currentButtonUp = new System.Windows.Forms.Button();
             Button currentButtonDown = new System.Windows.Forms.Button();
             Button currentButtonRemove = new System.Windows.Forms.Button();
             Label currentLabel = new System.Windows.Forms.Label();
 
-            int height = 27 * id;
+            int height = 27 * Convert.ToInt32(vraag[3]);
             // 
             // button1
             // 
             currentButtonUp.Location = new System.Drawing.Point(440, height);
-            currentButtonUp.Name = "Up~" + Convert.ToString(id);
+            currentButtonUp.Name = "Up~" + vraag[3];
             currentButtonUp.Size = new System.Drawing.Size(31, 23);
             currentButtonUp.TabIndex = 0;
             currentButtonUp.Text = "^";
@@ -144,7 +130,7 @@
             // button2
             // 
             currentButtonDown.Location = new System.Drawing.Point(475, height);
-            currentButtonDown.Name = "Down~" + Convert.ToString(id);
+            currentButtonDown.Name = "Down~" + vraag[3];
             currentButtonDown.Size = new System.Drawing.Size(29, 23);
             currentButtonDown.TabIndex = 1;
             currentButtonDown.Text = "v";
@@ -154,7 +140,7 @@
             // button2
             // 
             currentButtonRemove.Location = new System.Drawing.Point(510, height);
-            currentButtonRemove.Name = "Remove~" + Convert.ToString(id);
+            currentButtonRemove.Name = "Remove~" + vraag[3];
             currentButtonRemove.Size = new System.Drawing.Size(29, 23);
             currentButtonRemove.TabIndex = 1;
             currentButtonRemove.Text = "X";
@@ -164,10 +150,10 @@
             // label1
             // 
             currentLabel.Location = new System.Drawing.Point(12, height + 4);
-            currentLabel.Name = "label~" + Convert.ToString(id);
+            currentLabel.Name = "label~" + vraag[3];
             currentLabel.Size = new System.Drawing.Size(438, 18);
             currentLabel.TabIndex = 2;
-            currentLabel.Text = q.GetQuestion(); 
+            currentLabel.Text = vraag[2]; 
 
             this.panel1.Controls.Add(currentButtonUp);
             this.panel1.Controls.Add(currentButtonDown);

@@ -10,37 +10,28 @@ using System.Windows.Forms;
 
 namespace TestApp
 {
-    public partial class Form9 : Form
+    public partial class OpdrachtAanmakenForm : Form
     {
         readonly Form prev;
         readonly DataSetClass ds;
 
-        public Form9(Form previous)
+        public OpdrachtAanmakenForm(Form previous)
         {
-            this.ds = Program.GetInfo();
-
             InitializeComponent();
-
+            ds = Program.ds;
             prev = previous;
-
-            AddSettingsToCombobox();
-        }
-
-        private void AddSettingsToCombobox()
-        {
-            List<string> keys = this.ds.GetSettingsClass().GetKeys();
-
-            foreach (string key in keys)
-                comboBox1.Items.Add(key);
-
         }
 
         private void Button1_Click(object sender, EventArgs e)
         {
-            if (comboBox1.Text == "" || textBox1.Text == "")
+            Opdrachten opdrachtenClass = ds.GetOpdrachtenClass();
+
+            string opdrachtenName = textBox1.Text;
+
+            if (opdrachtenClass.OpdrachtAlreadyExists(opdrachtenName))
                 return;
 
-            this.ds.GetSettingsClass().UpdateSetting(comboBox1.Text, textBox1.Text);
+            opdrachtenClass.AddOpdracht(opdrachtenName);
 
             textBox1.Text = "";
             textBox1.Focus();

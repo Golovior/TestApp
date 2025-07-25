@@ -13,45 +13,55 @@ namespace TestApp
     public partial class Form3 : Form
     {
         readonly Form previous;
+        readonly DataSetClass ds;
 
         public Form3(Form prev)
         {
             InitializeComponent();
             previous = prev;
+
+            ds = Program.GetInfo();
+
+            AddOpdrachtenToCombobox();
+        }
+
+        private void AddOpdrachtenToCombobox()
+        {
+            List<string> opdrachten = this.ds.GetOpdrachtenClass().GetOpdrachten();
+
+            foreach (string opdracht in opdrachten)
+                comboBox1.Items.Add(opdracht);
+
         }
 
         private void CloseApplication(object sender, FormClosingEventArgs e)
         {
-            Application.Exit();
+            this.Dispose();
+            previous.Show();
         }
 
         private void Button1_Click(object sender, EventArgs e)
         {
-            DataSetInfo dataSetInfo = Program.GetInfo();
-            int? gameId = dataSetInfo.currentGame;
+            if (comboBox1.Text == "" || textBox1.Text == "")
+                return;
 
-            if (gameId == null)
-                throw new Exception("GameId must be set. Add 'gameid=' to Setting file");
+            string opdracht = comboBox1.Text;
+            string question = textBox1.Text;
 
-            Games Game = dataSetInfo.GetGameById(gameId);
+            string alfabetisch = "0";
 
-            List<Questions>? list = dataSetInfo.GetQuestions();
+            if (checkBox1.Checked)
+                alfabetisch = "1";
 
-            if (list == null)
-                throw new Exception("List must be set. Check questions list");
+            Questions questions = this.ds.GetQuestionsClass();
 
+            if (questions.QuestionAlreadyExists(opdracht, question, alfabetisch))
+                return;
 
-            string questionValue = textBox1.Text;
-
-            Questions question = new();
-            question.SetQuestion(questionValue);
-            question.SetId(list.Count);
-            question.SetGame(Game);
-
-            question.WriteToFile();
-            dataSetInfo.AddToQuestionList(question);
+            questions.AddQuestion(opdracht, question, alfabetisch);
 
             textBox1.Text = "";
+            checkBox1.Checked = false;
             textBox1.Focus();
         }
 

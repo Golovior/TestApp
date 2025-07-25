@@ -13,33 +13,29 @@ namespace TestApp
     public partial class Form16 : Form
     {
         readonly Form prev;
-        readonly List<Tests>? tests;
-        readonly DataSetInfo? dsi;
-
-        Tests? selectedTest;
+        readonly DataSetClass ds;
 
         public Form16(Form previous)
         {
-            this.dsi = Program.GetInfo();
             prev = previous;
-
-            this.tests = dsi.GetTests();
 
             InitializeComponent();
 
-            if (tests != null)
+            ds = Program.GetInfo();
+            
+            PutTestsInCombobox();
+
+        }
+
+        private void PutTestsInCombobox()
+        {
+            Tests tests = ds.GetTestsClass();
+
+            List<string> allTests = tests.GetAllTests();
+
+            foreach(string test in allTests)
             {
-                List<string> testsForCombobox = new();
-                foreach (Tests test in tests)
-                {
-                    string? t = test.GetName();
-                    if (t == null)
-                        continue;
-
-                    testsForCombobox.Add(t);
-                }
-
-                comboBox1.Items.AddRange(testsForCombobox.ToArray());
+                comboBox1.Items.Add(test);
             }
         }
 
@@ -51,9 +47,6 @@ namespace TestApp
 
         private void ButtonUp_click(object sender, EventArgs e)
         {
-            if (this.selectedTest == null)
-                return;
-
             Button clicked = (Button)sender;
             
             string name = clicked.Name.Replace("Up~","");
@@ -98,21 +91,10 @@ namespace TestApp
         private void ButtonDown_click(object sender, EventArgs e)
         {
 
-            if (this.selectedTest == null)
-                return;
-
             Button clicked = (Button)sender;
 
             string name = clicked.Name.Replace("Down~", "");
             string prevQuestionId = Convert.ToString(Convert.ToInt32(name) + 1);
-
-            List<Questions>? testQuestions = selectedTest.GetQuestions();
-
-            if (testQuestions == null)
-                return;
-
-            if (prevQuestionId == Convert.ToString(testQuestions.Count + 1))
-                return;
 
             string questionValue = "";
             string questionReplaceValue = "";
@@ -148,9 +130,6 @@ namespace TestApp
 
         private void ButtonRemove_click(object sender, EventArgs e)
         {
-            if (selectedTest == null)
-                return;
-
             Button clicked = (Button)sender;
 
             string name = clicked.Name.Replace("Remove~", "");
@@ -168,87 +147,83 @@ namespace TestApp
             if (questionValue == "")
                 return;
 
-            List<Questions>? questions = selectedTest.GetQuestions();
-
-            if (questions == null)
-                return;
-
-            Questions selectedQuestion = new();
-
-            foreach(Questions q in questions)
-            {
-                if (q.GetQuestion() == questionValue)
-                {
-                    selectedQuestion = q;
-                    break;
-                }
-            }
-
-            if (selectedQuestion.GetQuestion() == null)
-                return;
-
-            selectedTest.RemoveQuestion(selectedQuestion);
-
-            this.updateElements(selectedTest);
         }
 
         private void ChangeTest(object sender, EventArgs e)
         {
-            if (tests == null)
-                return;
+            TestVragen testVragen = ds.GetTestVragenClass();
 
-            string testValue = comboBox1.Text;
+            List<List<string>> alleVragen = testVragen.GetAllTestVragen();
 
-            foreach (Tests t in this.tests)
+            string test = comboBox1.Text;
+            List<List<string>> vraagVoorTest = new();
+
+            foreach (List<string> vraag in alleVragen) {
+                if (vraag[0] == test)
+                    vraagVoorTest.Add(vraag);
+            }
+
+            List<List<string>> orderedVraagVoorTest = new();
+
+            for (int i = 0; i <= alleVragen.Count; i++)
             {
-                if (t.GetName() == testValue)
+                foreach (List<string> vraag in vraagVoorTest)
                 {
-                    this.selectedTest = t;
-                    break;
+                    if (i == Convert.ToInt32(vraag[3]))
+                        orderedVraagVoorTest.Add(vraag);
                 }
             }
 
-            if (this.selectedTest == null)
-                return;
-
-            this.updateElements(selectedTest);
+            foreach(List<string> vraag in orderedVraagVoorTest)
+            {
+                this.MakeQuestionRow(vraag);
+            }
         }
 
         private void Button2_Click(object sender, EventArgs e)
         {
-            if (selectedTest == null)
-                return;
+            TestVragen testVragen = ds.GetTestVragenClass();
 
-            List<Questions>? questionsForTest = selectedTest.GetQuestions();
+            List<List<string>> alleVragen = testVragen.GetAllTestVragen();
 
-            if (questionsForTest == null)
-                return;
+            string test = comboBox1.Text;
 
-            string questionLine = "";
+            List<List<string>> vraagVoorTest = new();
 
-            foreach(Label l in labels)
+            foreach (List<string> vraag in alleVragen)
             {
-                string questionValue = l.Text;
-
-                foreach (Questions q in questionsForTest)
+                if (vraag[0] == test)
                 {
-                    if (q.GetQuestion() == questionValue)
-                    {
-                        if (questionLine.Length > 0)
-                            questionLine += ',';
-
-                        questionLine += Convert.ToString(q.GetId());
-                        break;
-                    }
+                    vraagVoorTest.Add(vraag);
                 }
             }
 
-            selectedTest.UpdateInFile(questionLine);
+            for (int i = 0; i < vraagVoorTest.Count; i++)
+            {
+                testVragen.RemoveTestVragen(vraagVoorTest[i]);
+            }
+                
+            for (int i = 0; i < vraagVoorTest.Count; i++)
+            {
+                foreach (List<string> vraag in vraagVoorTest)
+                {
+                    foreach (Label label in labels)
+                    {
+                        if (label.Text == vraag[2])
+                        {
+                            string order = label.Name.Replace("label~", "");
+                            if(Convert.ToInt32(order) == i + 1)
+                                testVragen.AddTestVraag(test, vraag[1], vraag[2], order);
+                        }
+                    }
+                }
+            }
         }
 
         private void CloseApplication(object sender, FormClosingEventArgs e)
         {
-            Application.Exit();
+            this.Dispose();
+            prev.Show();
         }
     }
 }

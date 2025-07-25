@@ -10,11 +10,11 @@ using System.Windows.Forms;
 
 namespace TestApp
 {
-    public partial class Form6 : Form
+    public partial class SettingsForm : Form
     {
         readonly Form prev;
 
-        public Form6(Form previous)
+        public SettingsForm(Form previous)
         {
             InitializeComponent();
             prev = previous;
@@ -22,7 +22,7 @@ namespace TestApp
 
         private void Button1_Click(object sender, EventArgs e)
         {
-            Form7 form = new(this);
+            SpelAanmakenForm form = new(this);
 
             this.Hide();
             form.Show();
@@ -34,15 +34,6 @@ namespace TestApp
             prev.Show();
         }
 
-        private void Button2_Click(object sender, EventArgs e)
-        {
-            Form8 form = new(this);
-
-            this.Hide();
-            form.Show();
-
-        }
-
         private void Button3_Click(object sender, EventArgs e)
         {
             Form9 form = new(this);
@@ -51,17 +42,41 @@ namespace TestApp
             form.Show();
         }
 
-        private void Button5_Click(object sender, EventArgs e)
+        private void CloseApplication(object sender, FormClosingEventArgs e)
         {
-            Form12 form = new(this);
+            Application.Exit();
+        }
+
+        private void Button2_Click(object sender, EventArgs e)
+        {
+            OpdrachtAanmakenForm form = new(this);
 
             this.Hide();
             form.Show();
         }
 
-        private void CloseApplication(object sender, FormClosingEventArgs e)
+        private void Button6_Click(object sender, EventArgs e)
         {
-            Application.Exit();
+            AddPlayersForm form = new(this);
+
+            this.Hide();
+            form.Show();
+        }
+
+        private void Button7_Click(object sender, EventArgs e)
+        {
+            PlayerStatus form = new(this);
+
+            this.Hide();
+            form.Show();
+        }
+
+        private void Button5_Click(object sender, EventArgs e)
+        {
+            DataSetClass ds = Program.GetInfo();
+
+            Api api = ds.GetApiClass();
+            api.SaveData();
         }
     }
 }

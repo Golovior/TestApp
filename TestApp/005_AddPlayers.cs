@@ -10,40 +10,38 @@ using System.Windows.Forms;
 
 namespace TestApp
 {
-    public partial class SpelAanmakenForm : Form
+    public partial class AddPlayersForm : Form
     {
         readonly Form prev;
         readonly DataSetClass ds;
 
-        public SpelAanmakenForm(Form previous)
+        public AddPlayersForm(Form prev)
         {
-            this.ds = Program.GetInfo();
+            this.prev = prev;
+            ds = Program.GetInfo();
+
             InitializeComponent();
-            prev = previous;
         }
 
         private void Button1_Click(object sender, EventArgs e)
         {
-            Games gameClass = ds.GetGamesClass();
+            string playerName = textBox1.Text;
 
-            string gameName = textBox1.Text;
-
-            if (gameClass.GameAlreadyExists(gameName))
+            if (playerName == "")
                 return;
 
-            gameClass.AddGame(gameName);
+            Spelers spelers = ds.GetSpelersClass();
+
+            if (spelers.SpelerAlreadyExists(playerName))
+                return;
+
+            spelers.AddSpeler(playerName);
 
             textBox1.Text = "";
             textBox1.Focus();
         }
 
         private void Button2_Click(object sender, EventArgs e)
-        {
-            this.Dispose();
-            prev.Show();
-        }
-
-        private void CloseApplication(object sender, FormClosingEventArgs e)
         {
             this.Dispose();
             prev.Show();

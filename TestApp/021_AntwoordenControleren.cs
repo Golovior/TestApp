@@ -13,32 +13,29 @@ namespace TestApp
     public partial class Form22 : Form
     {
         readonly Form prev;
-        readonly List<Tests>? tests;
-        readonly DataSetInfo dsi;
-        List<Running>? testRunnings;
+        readonly DataSetClass ds;
+        readonly TestAntwoorden testAntwoorden;
 
         public Form22(Form previous)
         {
-            this.dsi = Program.GetInfo();
             this.prev = previous;
-
-            this.tests = dsi.GetTests();
+            ds = Program.GetInfo();
+            
+            testAntwoorden = ds.GetTestAntwoordenClass();
 
             InitializeComponent();
 
-            if (tests != null)
+            FillComboboxWithTests();
+
+        }
+
+        public void FillComboboxWithTests()
+        {
+            List<string> tests = ds.GetTestsClass().GetAllTests();
+
+            foreach (string test in tests)
             {
-                List<string> testsForCombobox = new();
-                foreach (Tests test in tests)
-                {
-                    string? t = test.GetName();
-                    if (t == null)
-                        continue;
-
-                    testsForCombobox.Add(t);
-                }
-
-                comboBox1.Items.AddRange(testsForCombobox.ToArray());
+                comboBox1.Items.Add(test);
             }
         }
 
@@ -50,152 +47,58 @@ namespace TestApp
 
         private void ChangeTest(object sender, EventArgs e)
         {
+            string testName = comboBox1.Text;
+
             comboBox2.Items.Clear();
             comboBox2.Text = "";
 
-            if (tests == null)
-                return;
+            List<string> spelers = new();
 
-            string testName = comboBox1.Text;
-
-            List<Running>? runnings = dsi.GetRunnings();
-
-            if (runnings == null)
-                return;
-
-            Tests? selectedTest = null;
-
-            foreach (Tests test in tests)
+            foreach(List<string> a in testAntwoorden.GetAllTestAntwoorden())
             {
-                if (test.GetName() == testName)
-                {
-                    selectedTest = test;
-                }
-            }
-
-            if (selectedTest == null)
-                return;
-
-            testRunnings = new List<Running>();
-
-            foreach (Running r in runnings)
-            {
-                Tests? testForRunning = r.GetTest();
-                if (testForRunning == null)
+                if (a[0] != testName)
                     continue;
 
-                if (testForRunning.GetId() == selectedTest.GetId())
-                {
-                    testRunnings.Add(r);
-                }
+                if(!spelers.Contains(a[1]))
+                    spelers.Add(a[1]);
             }
 
-            if (testRunnings.Count == 0)
-                return;
+            spelers.Sort();
 
-            List<string> playersWhoMadeTest = new();
-
-            foreach (Running r in testRunnings)
+            foreach(string speler in spelers)
             {
-                Players? speler = r.GetPlayer();
-
-                if (speler == null)
-                    return;
-
-                string? spelerNaam = speler.GetName();
-
-                if (spelerNaam == null)
-                    return;
-
-                playersWhoMadeTest.Add(spelerNaam);
+                comboBox2.Items.Add(speler);
             }
-
-            comboBox2.Items.AddRange(playersWhoMadeTest.ToArray());
         }
 
         private void ChangePlayer(object sender, EventArgs e)
         {
+            string testName = comboBox1.Text;
             string name = comboBox2.Text;
 
             if (name == null)
                 return;
 
-            if (testRunnings == null)
-                return;
+            List<List<string>> antwoordenSet = new();
 
-            Running? selectedRunning = null;
-
-            foreach (Running r in testRunnings)
+            foreach (List<string> a in testAntwoorden.GetAllTestAntwoorden())
             {
-                Players? speler = r.GetPlayer();
-
-                if (speler == null)
+                if (a[0] != testName)
                     continue;
 
-                if (speler.GetName() == name)
-                {
-                    selectedRunning = r;
-                    break;
-                }
+                if (a[1] != name)
+                    continue;
+
+                antwoordenSet.Add(a);
             }
 
-            if (selectedRunning == null)
-                return;
-
-            List<Antwoorden>? alleAntwoorden = dsi.GetAntwoorden();
-            List<Antwoorden> interessanteAntwoorden = new();
-
-            if (alleAntwoorden == null)
-                return;
-
-            foreach(Antwoorden a in alleAntwoorden)
-            {
-                Running? run = a.GetRunning();
-
-                if (run == null)
-                    continue;
-
-                if(run.GetId() == selectedRunning.GetId())
-                    interessanteAntwoorden.Add(a);
-            }
-
-            if (interessanteAntwoorden.Count == 0)
-                return;
-
-            List<string[]> gegevenAntwoorden = new();
-
-            foreach(Antwoorden antwoord in interessanteAntwoorden)
-            {
-                string[] vraaginfo = new string[2];
-
-                Options o = antwoord.GetOption();
-                string? option = o.GetValue();
-                
-                if (option == null)
-                    continue;
-
-                Questions? vraag = o.GetQuestion();
-
-                if (vraag == null)
-                    continue;
-
-                string? vraagValue = vraag.GetQuestion();
-
-                if (vraagValue == null)
-                    continue;
-
-                vraaginfo[0] = vraagValue;
-                vraaginfo[1] = option;
-
-                gegevenAntwoorden.Add(vraaginfo);
-            }
-
-            this.showAntwoordenFromPlayer(gegevenAntwoorden);
+            showAntwoordenFromPlayer(antwoordenSet);
         }
 
         private void CloseApplication(object sender, FormClosingEventArgs e)
         {
-            Application.Exit();
+            this.Dispose();
+            prev.Show();
         }
     }
 }

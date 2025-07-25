@@ -1,4 +1,6 @@
-﻿namespace TestApp
+﻿using System.Reflection.Metadata.Ecma335;
+
+namespace TestApp
 {
     partial class Form20
     {
@@ -28,192 +30,161 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.button1 = new System.Windows.Forms.Button();
-            this.panel1 = new System.Windows.Forms.Panel();
-            this.label1 = new System.Windows.Forms.Label();
-            this.label2 = new System.Windows.Forms.Label();
-            this.panel2 = new System.Windows.Forms.Panel();
-            this.button2 = new System.Windows.Forms.Button();
-            this.label3 = new System.Windows.Forms.Label();
-            this.textBox1 = new System.Windows.Forms.TextBox();
-            this.label4 = new System.Windows.Forms.Label();
-            this.label5 = new System.Windows.Forms.Label();
-            this.SuspendLayout();
+            antwoordLabels = new List<Label>();
+            antwoordRBs = new List<RadioButton>();
+            button1 = new Button();
+            panel1 = new Panel();
+            label1 = new Label();
+            label2 = new Label();
+            panel2 = new Panel();
+            button2 = new Button();
+            label3 = new Label();
+            textBox1 = new TextBox();
+            label4 = new Label();
+            label5 = new Label();
+            label6 = new Label();
+            SuspendLayout();
             // 
             // button1
             // 
-            this.button1.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.button1.Location = new System.Drawing.Point(277, 348);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(186, 56);
-            this.button1.TabIndex = 0;
-            this.button1.Text = "Test starten";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.Button1_Click);
+            button1.Font = new Font("Segoe UI", 16F, FontStyle.Bold, GraphicsUnit.Point);
+            button1.Location = new Point(277, 348);
+            button1.Name = "button1";
+            button1.Size = new Size(186, 56);
+            button1.TabIndex = 0;
+            button1.Text = "Test starten";
+            button1.UseVisualStyleBackColor = true;
+            button1.Click += Button1_Click;
             // 
             // panel1
             // 
-            this.panel1.Location = new System.Drawing.Point(43, 71);
-            this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(340, 212);
-            this.panel1.TabIndex = 1;
-            this.panel1.Visible = false;
+            panel1.Location = new Point(43, 71);
+            panel1.Name = "panel1";
+            panel1.Size = new Size(340, 212);
+            panel1.TabIndex = 1;
+            panel1.Visible = false;
             // 
             // label1
             // 
-            this.label1.AutoSize = true;
-            this.label1.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.label1.ForeColor = System.Drawing.SystemColors.ControlLight;
-            this.label1.Location = new System.Drawing.Point(348, 264);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(70, 30);
-            this.label1.TabIndex = 2;
-            this.label1.Text = "Naam";
+            label1.AutoSize = true;
+            label1.Font = new Font("Segoe UI", 16F, FontStyle.Regular, GraphicsUnit.Point);
+            label1.ForeColor = SystemColors.ControlLight;
+            label1.Location = new Point(348, 264);
+            label1.Name = "label1";
+            label1.Size = new Size(70, 30);
+            label1.TabIndex = 2;
+            label1.Text = "Naam";
             // 
             // label2
             // 
-            this.label2.AutoSize = true;
-            this.label2.Font = new System.Drawing.Font("Segoe UI", 14.25F, System.Drawing.FontStyle.Italic, System.Drawing.GraphicsUnit.Point);
-            this.label2.ForeColor = System.Drawing.SystemColors.ControlLight;
-            this.label2.Location = new System.Drawing.Point(43, 9);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(61, 25);
-            this.label2.TabIndex = 3;
-            this.label2.Text = "label2";
-            this.label2.Visible = false;
+            label2.AutoSize = true;
+            label2.Font = new Font("Segoe UI", 14.25F, FontStyle.Italic, GraphicsUnit.Point);
+            label2.ForeColor = SystemColors.ControlLight;
+            label2.Location = new Point(43, 9);
+            label2.Name = "label2";
+            label2.Size = new Size(61, 25);
+            label2.TabIndex = 3;
+            label2.Text = "label2";
+            label2.Visible = false;
             // 
             // panel2
             // 
-            this.panel2.Location = new System.Drawing.Point(405, 71);
-            this.panel2.Name = "panel2";
-            this.panel2.Size = new System.Drawing.Size(340, 212);
-            this.panel2.TabIndex = 4;
-            this.panel2.Visible = false;
+            panel2.Location = new Point(405, 71);
+            panel2.Name = "panel2";
+            panel2.Size = new Size(340, 212);
+            panel2.TabIndex = 4;
+            panel2.Visible = false;
             // 
             // button2
             // 
-            this.button2.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.button2.Location = new System.Drawing.Point(54, 330);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(185, 56);
-            this.button2.TabIndex = 5;
-            this.button2.Text = "Antwoord";
-            this.button2.UseVisualStyleBackColor = true;
-            this.button2.Visible = false;
-            this.button2.Click += new System.EventHandler(this.Button2_Click);
+            button2.Font = new Font("Segoe UI", 16F, FontStyle.Bold, GraphicsUnit.Point);
+            button2.Location = new Point(54, 330);
+            button2.Name = "button2";
+            button2.Size = new Size(185, 56);
+            button2.TabIndex = 5;
+            button2.Text = "Antwoord";
+            button2.UseVisualStyleBackColor = true;
+            button2.Visible = false;
+            button2.Click += Button2_Click;
             // 
             // label3
             // 
-            this.label3.Font = new System.Drawing.Font("Segoe UI", 15.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.label3.ForeColor = System.Drawing.SystemColors.ControlLight;
-            this.label3.Location = new System.Drawing.Point(128, 9);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(585, 73);
-            this.label3.TabIndex = 6;
-            this.label3.Text = "Dit is een check om te zien of de tekst op meerdere regels komt te staan.";
-            this.label3.Visible = false;
+            label3.Font = new Font("Segoe UI", 15.75F, FontStyle.Bold, GraphicsUnit.Point);
+            label3.ForeColor = SystemColors.ControlLight;
+            label3.Location = new Point(128, 9);
+            label3.Name = "label3";
+            label3.Size = new Size(585, 73);
+            label3.TabIndex = 6;
+            label3.Text = "Dit is een check om te zien of de tekst op meerdere regels komt te staan.";
+            label3.Visible = false;
             // 
             // textBox1
             // 
-            this.textBox1.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.textBox1.Location = new System.Drawing.Point(278, 306);
-            this.textBox1.Name = "textBox1";
-            this.textBox1.Size = new System.Drawing.Size(186, 36);
-            this.textBox1.TabIndex = 3;
+            textBox1.Font = new Font("Segoe UI", 16F, FontStyle.Regular, GraphicsUnit.Point);
+            textBox1.Location = new Point(278, 306);
+            textBox1.Name = "textBox1";
+            textBox1.Size = new Size(186, 36);
+            textBox1.TabIndex = 3;
             // 
             // label4
             // 
-            this.label4.Image = global::TestApp.Properties.Resources.mol_logo;
-            this.label4.Location = new System.Drawing.Point(370, 30);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(388, 455);
-            this.label4.TabIndex = 7;
+            label4.Image = Properties.Resources.mol_logo;
+            label4.Location = new Point(370, 30);
+            label4.Name = "label4";
+            label4.Size = new Size(388, 455);
+            label4.TabIndex = 7;
             // 
             // label5
             // 
-            this.label5.Image = global::TestApp.Properties.Resources.mol_logo_small;
-            this.label5.Location = new System.Drawing.Point(91, 213);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(194, 228);
-            this.label5.TabIndex = 8;
-            this.label5.Visible = false;
+            label5.Image = Properties.Resources.mol_logo_small;
+            label5.Location = new Point(91, 213);
+            label5.Name = "label5";
+            label5.Size = new Size(194, 228);
+            label5.TabIndex = 8;
+            label5.Visible = false;
+            // 
+            // label6
+            // 
+            label6.AutoSize = true;
+            label6.Location = new Point(12, 426);
+            label6.Name = "label6";
+            label6.Size = new Size(38, 15);
+            label6.TabIndex = 9;
+            label6.Text = "label6";
+            label6.Visible = false;
             // 
             // Form20
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.BackColor = System.Drawing.SystemColors.ActiveCaptionText;
-            this.ClientSize = new System.Drawing.Size(800, 450);
-            this.Controls.Add(this.label5);
-            this.Controls.Add(this.label4);
-            this.Controls.Add(this.label1);
-            this.Controls.Add(this.textBox1);
-            this.Controls.Add(this.label3);
-            this.Controls.Add(this.button2);
-            this.Controls.Add(this.panel2);
-            this.Controls.Add(this.label2);
-            this.Controls.Add(this.panel1);
-            this.Controls.Add(this.button1);
-            this.Name = "Form20";
-            this.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.Text = "Form20";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.CloseApplication);
-            this.ResumeLayout(false);
-            this.PerformLayout();
-
-        }
-
-        public void prepareQuestion(List<Options> options)
-        {
-            int optionId = 0;
-            if (radioButtons == null)
-                radioButtons = new List<RadioButton>();
-            else
-                radioButtons.Clear();
-
-            foreach(Options o in options)
-            {
-                RadioButton r = new System.Windows.Forms.RadioButton();
-
-                int height = optionId * 38 + 10;
-
-                if(optionId > 4)
-                {
-                    height = height - (5 * 38);
-                }
-
-                r.AutoSize = true;
-                r.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-                r.ForeColor = System.Drawing.SystemColors.ControlLight;
-                r.Location = new System.Drawing.Point(20, height);
-                r.Name = "radioButton~" + Convert.ToString(optionId);
-                r.Size = new System.Drawing.Size(157, 34);
-                r.TabIndex = 3;
-                r.TabStop = true;
-                r.Text = o.GetValue();
-                r.UseVisualStyleBackColor = true;
-                r.Visible = true;
-
-                if(optionId > 4)
-                {
-                    panel2.Controls.Add(r);
-                }
-                else
-                {
-                    panel1.Controls.Add(r);
-                }
-
-                radioButtons.Add(r);
-
-                optionId++;
-            }
-            
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            BackColor = SystemColors.ActiveCaptionText;
+            ClientSize = new Size(800, 450);
+            Controls.Add(label6);
+            Controls.Add(label5);
+            Controls.Add(label4);
+            Controls.Add(label1);
+            Controls.Add(textBox1);
+            Controls.Add(label3);
+            Controls.Add(button2);
+            Controls.Add(panel2);
+            Controls.Add(label2);
+            Controls.Add(panel1);
+            Controls.Add(button1);
+            Name = "Form20";
+            RightToLeft = RightToLeft.No;
+            Text = "Form20";
+            FormClosing += CloseApplication;
+            ResumeLayout(false);
+            PerformLayout();
         }
 
         public void repositionElements()
         {
-            int centerWidthPixel = this.Width / 2;
-            int centerHeightPixel = this.Height / 2;
+            int currentWidth = Screen.GetWorkingArea(this).Width;
+            int currentHeight = Screen.GetWorkingArea(this).Height;
+
+            int centerWidthPixel = currentWidth / 2;
+            int centerHeightPixel = currentHeight / 2;
 
             int bottomEmpty = 10;
             int betweenEmpty = 10;
@@ -256,24 +227,96 @@
             this.panel1.Location = new System.Drawing.Point(224, 170);
             this.panel2.Location = new System.Drawing.Point(centerWidthPixel, 170);
 
-            this.panel1.Size = new System.Drawing.Size(centerWidthPixel - 244, 5 * 38);
-            this.panel2.Size = new System.Drawing.Size(centerWidthPixel - 244, 5 * 38);
+            this.panel1.Size = new System.Drawing.Size(centerWidthPixel - 244, 7 * 38 + 15);
+            this.panel2.Size = new System.Drawing.Size(centerWidthPixel - 244, 7 * 38 + 15);
 
-            this.button2.Location = new System.Drawing.Point(224, 5 * 38 + 245);
+            this.button2.Location = new System.Drawing.Point(224, 7 * 38 + 245);
+        }
+
+        public void ShowNextQuestion(int vraagNummer, string question, List<List<string>> antwoordenOpties, string alfabetisch = "1")
+        {
+            label2.Text = Convert.ToString(vraagNummer);
+            label3.Text = question;
+
+            this.panel1.Controls.Clear();
+            this.panel2.Controls.Clear();
+            antwoordLabels.Clear();
+            antwoordRBs.Clear();
+
+            List<string> opties = new();
+
+            foreach(List<string> antwoord in antwoordenOpties)
+            {
+                opties.Add(antwoord[2]);
+            }
+
+            if(alfabetisch == "1")
+                opties.Sort();
+
+            int optieId = 0;
+            bool twoColumns = false;
+            int splitId = 0;
+            Panel toPutIn = panel1;
+
+            if (opties.Count > 5) {
+                twoColumns = true;
+                splitId = Convert.ToInt32(Math.Ceiling(Convert.ToDouble(opties.Count) / 2.0));
+            }
+
+            foreach(string optie in opties)
+            {
+                optieId++;
+                int calNumber = optieId;
+
+                if (twoColumns)
+                {
+                    if (splitId < optieId)
+                    {
+                        calNumber = optieId - splitId;
+                        toPutIn = panel2;
+                    }
+                }
+
+                RadioButton optieRB = new RadioButton();
+                optieRB.Name = "Keuze~" + Convert.ToString(optieId);
+                optieRB.Location = new System.Drawing.Point(10, 17 + (30 * calNumber));
+                optieRB.Size = new System.Drawing.Size(20, 20);
+                optieRB.TabIndex = 8 + optieId;
+
+                antwoordRBs.Add(optieRB);
+
+                toPutIn.Controls.Add(optieRB);
+
+                Label optieLbl = new Label();
+                optieLbl.Location = new System.Drawing.Point(30, 10 + (30 * calNumber));
+                optieLbl.AutoSize = true;
+                optieLbl.Name = "label~" + Convert.ToString(optieId);
+                optieLbl.Size = new System.Drawing.Size(toPutIn.Width - 40, 20);
+                optieLbl.TabIndex = 8 + opties.Count + optieId;
+                optieLbl.Text = optie;
+                optieLbl.ForeColor = System.Drawing.Color.White;
+                optieLbl.Font = new System.Drawing.Font("Segoe UI", 15.75F, System.Drawing.GraphicsUnit.Point);
+
+                antwoordLabels.Add(optieLbl);
+
+                toPutIn.Controls.Add(optieLbl);
+            }
         }
 
         #endregion
 
+        private List<Label> antwoordLabels;
+        private List<RadioButton> antwoordRBs;
         private Button button1;
         private Panel panel1;
         private Label label1;
         private Label label2;
         private Panel panel2;
-        private List<RadioButton> radioButtons;
         private Button button2;
         private Label label3;
         private TextBox textBox1;
         private Label label4;
         private Label label5;
+        private Label label6;
     }
 }

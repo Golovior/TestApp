@@ -3,7 +3,7 @@ namespace TestApp
     internal static class Program
     {
 
-        public static DataSetInfo dsI = new();
+        public static DataSetClass ds = new();
 
         /// <summary>
         ///  The main entry point for the application.
@@ -11,17 +11,15 @@ namespace TestApp
         [STAThread]
         static void Main()
         {
-            _ = Program.GetInfo();
-
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
-            Application.Run(new Form1());
+            Application.Run(new Main());
         }
 
-        public static DataSetInfo GetInfo()
+        public static DataSetClass GetInfo()
         {
-            return dsI;
+            return ds;
         }
 
     }

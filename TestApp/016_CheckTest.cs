@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
+using System.Text.Json;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -13,127 +14,143 @@ namespace TestApp
     public partial class Form17 : Form
     {
         readonly Form prev;
+        readonly DataSetClass ds;
 
-        readonly List<Tests>? tests;
-        readonly DataSetInfo dsi;
-
-        Tests? selectedTest;
+        readonly List<string> tests;
 
         public Form17(Form previous)
         {
             prev = previous;
-            this.dsi = Program.GetInfo();
-
-            this.tests = dsi.GetTests();
-
+            ds = Program.GetInfo();
+        
             InitializeComponent();
 
-            if (tests != null)
+            tests = ds.GetTestsClass().GetAllTests();
+
+            FillComboboxWithTests(tests);
+        }
+
+        private void FillComboboxWithTests(List<string> tests)
+        {
+            foreach (string test in tests)
             {
-                List<string> testsForCombobox = new();
-                foreach (Tests test in tests)
-                {
-                    string? t = test.GetName();
-                    if (t == null)
-                        continue;
-
-                    testsForCombobox.Add(t);
-                }
-
-                comboBox1.Items.AddRange(testsForCombobox.ToArray());
+                comboBox1.Items.Add(test);
             }
         }
 
         private void Button1_Click(object sender, EventArgs e)
         {
-            if (selectedTest == null)
+            string testName = comboBox1.Text;
+
+            List<string> errors = new();
+
+            if (testName == "")
                 return;
 
-            List<Questions>? questions = selectedTest.GetQuestions();
+            List<List<string>> testVragen = ds.GetTestVragenClass().GetAllTestVragen();
+            List<List<string>> allPlayers = ds.GetSpelersClass().GetSpelers();
 
-            if (questions == null)
+            List<List<string>> vragen = new();
+            List<string> activePlayers = new();
+
+            foreach(List<string> questions in testVragen)
             {
-                label2.Text = "Er zitten geen vragen in deze test.";
-                return;
+                if (questions[0] == testName)
+                    vragen.Add(questions);
             }
 
-            Games? game = dsi.GetGameById(dsi.currentGame);
-
-            if (game == null)
+            foreach(List<string> speler in allPlayers)
             {
-                label2.Text = "Waarom zit deze test niet in een bestaande game???";
-                return;
+                if (speler[1] == "1")
+                    activePlayers.Add(speler[0]);
             }
 
-            List<Players>? players = game.GetPlayers();
+            activePlayers.Sort();
+            List<List<string>> antwoorden = ds.GetAntwoordenClass().GetAntwoorden();
 
-            if(players == null)
+            int juisteAntwoorden = 0;
+
+            foreach (List<string> vraag in vragen)
             {
-                label2.Text = "Er zitten geen spelers in dit spel. Dus geen test te checken.";
-                return;
-            }
+                List<List<string>> mogelijkeAntwoorden = new();
+                List<string> playersForQuestionOptions = new();
 
-            List<Players> activePlayers = new();
+                bool juistGevonden = false;
 
-            foreach(Players p in players)
-            {
-                if(p.GetStatus() == "Actief")
+                foreach(List<string> antwoord in antwoorden)
                 {
-                    activePlayers.Add(p);
-                }
-            }
-
-            if(activePlayers.Count == 0)
-            {
-                label2.Text = "Geen actieve spelers in dit spel.";
-                return;
-            }
-            
-            foreach(Questions q in questions)
-            {
-                List<Options>? options = q.GetOptions();
-                if(options == null)
-                {
-                    label2.Text = "Vraag: '" + q.GetQuestion() + "' heeft geen opties.";
-                    return;
-                }
-                
-                List<Players> playersWithOptions = new();
-                List<Options> activeOptions = new();
-
-                foreach (Options o in options)
-                {
-                    List<Players>? optionPlayers = o.GetPlayers();
-                    if (optionPlayers == null)
-                        continue;
-
-                    foreach(Players op in optionPlayers)
+                    if (antwoord[0] != vraag[1])
                     {
-                        foreach(Players ap in activePlayers)
+                        continue;
+                    }
+
+                    if (antwoord[1] != vraag[2])
+                    {
+                        continue;
+                    }
+
+                    mogelijkeAntwoorden.Add(antwoord);
+
+                    if (antwoord[3] == "1")
+                    {
+                        if(!juistGevonden)
+                            juistGevonden = true;
+                        else 
                         {
-                            if(ap.GetId() == op.GetId())
-                            {
-                                activeOptions.Add(o);
-                                playersWithOptions.Add(ap);
-                            }
+                            string error = "Vraag \"" + antwoord[1] + "\" heeft meerdere antwoorden juist.";
+                            errors.Add(error);
+                        }
+                    }
+
+                    if (antwoord[4].Length > 4)
+                    {
+                        List<string> pqo = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(antwoord[4]) ?? new();
+                        foreach(string s in pqo)
+                        {
+                            playersForQuestionOptions.Add(s); 
                         }
                     }
                 }
 
-                if(playersWithOptions.Count != activePlayers.Count)
+                if (playersForQuestionOptions.Count > 0)
                 {
-                    label2.Text = "Niet alle actieve spelers hebben een geselecteerd antwoord voor vraag '" + q.GetQuestion() + "'";
-                    return;
+                    bool foundAllPlayers = true;
+                    foreach (string ap in activePlayers)
+                    {
+                        if (!playersForQuestionOptions.Contains(ap))
+                            foundAllPlayers = false;
+                    }
+
+                    if (!foundAllPlayers)
+                    {
+                        string error = "Vraag \"" + vraag[2] + "\" heeft niet voor alle spelers een geselecteerd antwoord.";
+                        errors.Add(error);
+                    }
                 }
 
-                if (activeOptions.Count == 1)
+                if (mogelijkeAntwoorden.Count == 0)
                 {
-                    label2.Text = "Vraag '" + q.GetQuestion() + "' heeft maar 1 actieve optie '";
-                    return;
+                    string error = "Vraag \"" + vraag[2] + "\" heeft geen antwoorden.";
+                    errors.Add(error);
+                }
+                else
+                {
+                    if (juistGevonden)
+                        juisteAntwoorden++;
+                    else
+                    {
+                        string error = "Vraag \"" + vraag[2] + "\" heeft geen juist antwoord geselecteerd.";
+                        errors.Add(error);
+                    }
                 }
             }
 
-            label2.Text = "Test lijkt volledig in orde.";
+            int order = 0;
+            foreach (string error in errors)
+            {
+                MakeErrorRow(error, order);
+                order++;
+            }
         }
 
         private void Button2_Click(object sender, EventArgs e)
@@ -142,26 +159,10 @@ namespace TestApp
             prev.Show();
         }
 
-        private void ChangeTest(object sender, EventArgs e)
-        {
-            if (tests == null)
-                return;
-
-            string testValue = comboBox1.Text;
-
-            foreach (Tests t in this.tests)
-            {
-                if (t.GetName() == testValue)
-                {
-                    this.selectedTest = t;
-                    break;
-                }
-            }
-        }
-
         private void CloseApplication(object sender, FormClosingEventArgs e)
         {
-            Application.Exit();
+            this.Dispose();
+            prev.Show();
         }
     }
 }
