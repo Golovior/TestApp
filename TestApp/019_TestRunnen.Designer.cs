@@ -36,7 +36,6 @@ namespace TestApp
             panel1 = new Panel();
             label1 = new Label();
             label2 = new Label();
-            panel2 = new Panel();
             button2 = new Button();
             label3 = new Label();
             textBox1 = new TextBox();
@@ -86,14 +85,6 @@ namespace TestApp
             label2.TabIndex = 3;
             label2.Text = "label2";
             label2.Visible = false;
-            // 
-            // panel2
-            // 
-            panel2.Location = new Point(405, 71);
-            panel2.Name = "panel2";
-            panel2.Size = new Size(340, 212);
-            panel2.TabIndex = 4;
-            panel2.Visible = false;
             // 
             // button2
             // 
@@ -166,7 +157,6 @@ namespace TestApp
             Controls.Add(textBox1);
             Controls.Add(label3);
             Controls.Add(button2);
-            Controls.Add(panel2);
             Controls.Add(label2);
             Controls.Add(panel1);
             Controls.Add(button1);
@@ -225,21 +215,22 @@ namespace TestApp
             this.label3.Size = new System.Drawing.Size(this.Width - 400, 150);
 
             this.panel1.Location = new System.Drawing.Point(224, 170);
-            this.panel2.Location = new System.Drawing.Point(centerWidthPixel, 170);
 
-            this.panel1.Size = new System.Drawing.Size(centerWidthPixel - 244, 7 * 38 + 15);
-            this.panel2.Size = new System.Drawing.Size(centerWidthPixel - 244, 7 * 38 + 15);
+            this.panel1.Size = new System.Drawing.Size(currentWidth - 244, 7 * 38 + 15);
 
             this.button2.Location = new System.Drawing.Point(224, 7 * 38 + 245);
         }
 
         public void ShowNextQuestion(int vraagNummer, string question, List<List<string>> antwoordenOpties, string alfabetisch = "1")
         {
+            int currentWidth = Screen.GetWorkingArea(this).Width;
+
+            int centerWidthPixel = currentWidth / 2;
+
             label2.Text = Convert.ToString(vraagNummer);
             label3.Text = question;
 
             this.panel1.Controls.Clear();
-            this.panel2.Controls.Clear();
             antwoordLabels.Clear();
             antwoordRBs.Clear();
 
@@ -265,21 +256,19 @@ namespace TestApp
 
             foreach(string optie in opties)
             {
-                optieId++;
                 int calNumber = optieId;
+                int extraOnWidth = 0;
 
-                if (twoColumns)
+                optieId++;
+                if (twoColumns && splitId < optieId)
                 {
-                    if (splitId < optieId)
-                    {
-                        calNumber = optieId - splitId;
-                        toPutIn = panel2;
-                    }
+                    calNumber -= splitId;
+                    extraOnWidth = centerWidthPixel - 122;
                 }
 
                 RadioButton optieRB = new RadioButton();
                 optieRB.Name = "Keuze~" + Convert.ToString(optieId);
-                optieRB.Location = new System.Drawing.Point(10, 17 + (30 * calNumber));
+                optieRB.Location = new System.Drawing.Point(10 + extraOnWidth, 17 + (30 * calNumber));
                 optieRB.Size = new System.Drawing.Size(20, 20);
                 optieRB.TabIndex = 8 + optieId;
 
@@ -288,10 +277,10 @@ namespace TestApp
                 toPutIn.Controls.Add(optieRB);
 
                 Label optieLbl = new Label();
-                optieLbl.Location = new System.Drawing.Point(30, 10 + (30 * calNumber));
+                optieLbl.Location = new System.Drawing.Point(30 + extraOnWidth, 10 + (30 * calNumber));
                 optieLbl.AutoSize = true;
                 optieLbl.Name = "label~" + Convert.ToString(optieId);
-                optieLbl.Size = new System.Drawing.Size(toPutIn.Width - 40, 20);
+                optieLbl.Size = new System.Drawing.Size((toPutIn.Width / 2) - 40, 20);
                 optieLbl.TabIndex = 8 + opties.Count + optieId;
                 optieLbl.Text = optie;
                 optieLbl.ForeColor = System.Drawing.Color.White;
@@ -311,7 +300,6 @@ namespace TestApp
         private Panel panel1;
         private Label label1;
         private Label label2;
-        private Panel panel2;
         private Button button2;
         private Label label3;
         private TextBox textBox1;

@@ -59,6 +59,7 @@ namespace TestApp
             {
                 this.Dispose();
                 this.prev.Show();
+                return;
             }
 
             this.speler = name;
@@ -222,10 +223,8 @@ namespace TestApp
         public void ShowStartup()
         {
             panel1.Controls.Clear();
-            panel2.Controls.Clear();
 
             panel1.Visible = false;
-            panel2.Visible = false;
 
             label5.Visible = false;
 
@@ -246,8 +245,7 @@ namespace TestApp
         public void ShowQuestionLayout()
         {
             panel1.Visible = true;
-            panel2.Visible = true;
-
+            
             label5.Visible = true;
 
             label2.Visible = true;
