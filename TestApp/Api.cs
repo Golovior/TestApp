@@ -43,8 +43,8 @@ namespace TestApp
 
             string content = Newtonsoft.Json.JsonConvert.SerializeObject(data);
 
-            string filePath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "/widmTest";
-            string fileName = filePath + "/apisending.txt";
+            string filePath = AppStoragePaths.DataDirectory;
+            string fileName = Path.Combine(filePath, "apisending.txt");
             
             if (!File.Exists(fileName))
             {
@@ -63,7 +63,7 @@ namespace TestApp
             if (responseString.StartsWith("Error"))
                 throw new Exception(responseString);
 
-            string fileNameRecieve = filePath + "/apirecieving.txt";
+            string fileNameRecieve = Path.Combine(filePath, "apirecieving.txt");
 
             if (!File.Exists(fileNameRecieve))
             {

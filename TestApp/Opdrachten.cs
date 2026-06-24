@@ -15,8 +15,8 @@ namespace TestApp
 
         public Opdrachten()
         {
-            this.filePath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "/widmTest";
-            this.fileName = filePath + "/opdrachten.txt";
+            this.filePath = AppStoragePaths.DataDirectory;
+            this.fileName = Path.Combine(filePath, "opdrachten.txt");
 
             if (!Directory.Exists(filePath))
                 Directory.CreateDirectory(filePath);

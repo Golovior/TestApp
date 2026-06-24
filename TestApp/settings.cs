@@ -15,8 +15,8 @@ namespace TestApp
         readonly string fileName;
 
         public Settings() {
-            this.filePath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "/widmTest";
-            this.fileName = filePath + "/settings.txt";
+            this.filePath = AppStoragePaths.DataDirectory;
+            this.fileName = Path.Combine(filePath, "settings.txt");
 
             if (!Directory.Exists(filePath))
                 Directory.CreateDirectory(filePath);

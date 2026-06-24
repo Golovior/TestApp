@@ -15,8 +15,8 @@ namespace TestApp
 
         public Spelers()
         {
-            this.filePath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "/widmTest";
-            this.fileName = filePath + "/spelers.txt";
+            this.filePath = AppStoragePaths.DataDirectory;
+            this.fileName = Path.Combine(filePath, "spelers.txt");
 
             if (!Directory.Exists(filePath))
                 Directory.CreateDirectory(filePath);
