@@ -13,12 +13,23 @@
             SettingEntry? marker = db.Settings.Find(LegacyImportCompletedKey);
             if (marker == null)
             {
-                db.Settings.Add(new SettingEntry
+                marker = new SettingEntry
                 {
                     Key = LegacyImportCompletedKey,
                     Value = "false"
-                });
+                };
 
+                db.Settings.Add(marker);
+
+                db.SaveChanges();
+            }
+
+            if (!string.Equals(marker.Value, "true", StringComparison.OrdinalIgnoreCase))
+            {
+                LegacyDataImporter importer = new();
+                importer.ImportFromLegacyFiles();
+
+                marker.Value = "true";
                 db.SaveChanges();
             }
         }
