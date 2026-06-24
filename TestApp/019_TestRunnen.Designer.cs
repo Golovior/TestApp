@@ -116,6 +116,7 @@ namespace TestApp
             textBox1.Name = "textBox1";
             textBox1.Size = new Size(186, 36);
             textBox1.TabIndex = 3;
+            textBox1.KeyUp += TextBox1_KeyUp;
             // 
             // label4
             // 

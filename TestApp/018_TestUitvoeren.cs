@@ -14,8 +14,9 @@ namespace TestApp
     {
         readonly Form prev;
         readonly DataSetClass ds;
+        readonly bool saveResults;
 
-        public Form19(Form previous)
+        public Form19(Form previous, bool saveResults)
         {
             prev = previous;
             ds = Program.GetInfo();
@@ -23,6 +24,7 @@ namespace TestApp
             InitializeComponent();
 
             FillComboboxWithTests();
+            this.saveResults = saveResults;
         }
 
         public void FillComboboxWithTests()
@@ -48,7 +50,7 @@ namespace TestApp
 
             string test = comboBox1.Text;
 
-            Form20 form = new(this, test, true);
+            Form20 form = new(this, test, this.saveResults);
 
             this.Hide();
             form.Show();

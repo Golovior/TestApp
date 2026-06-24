@@ -104,8 +104,6 @@ namespace TestApp
 
             int order = 0;
 
-            label1.Text = allAnswers.Count.ToString();
-
             foreach(List<string> answer in allAnswers)
             {
                 if (answer[0] != selectedOpdracht || answer[1] != selectedQuestion)

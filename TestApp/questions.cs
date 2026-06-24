@@ -11,7 +11,7 @@ namespace TestApp
 {
     internal class Questions
     {
-        readonly List<List<string>> appQuestions;
+        List<List<string>> appQuestions;
         readonly string filePath;
         readonly string fileName;
 
@@ -30,7 +30,7 @@ namespace TestApp
 
             string json = File.ReadAllText(fileName);
 
-            if (json == null)
+            if (string.IsNullOrWhiteSpace(json))
             {
                 this.appQuestions = new();
                 return;
@@ -39,22 +39,24 @@ namespace TestApp
             this.appQuestions = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(json) ?? new();
         }
 
-        public bool QuestionAlreadyExists(string opdracht, string question, string alphabetical) {
-            List<string> currentQuestion = new()
+        public bool QuestionAlreadyExists(string opdracht, string question) {
+            foreach (List<string> q in appQuestions)
             {
-                opdracht,
-                question,
-                alphabetical
-            };
+                if (q[0] != opdracht)
+                    continue;
 
-            if (appQuestions.Contains(currentQuestion))
+                if (q[1].ToLower() != question.ToLower())
+                    continue;
+
                 return true;
+            }
 
             return false;
         }
 
         public List<List<string>> GetAllQuestions()
         {
+            appQuestions.Sort((a, b) => a[1].CompareTo(b[1]));
             return this.appQuestions;
         }
 
@@ -73,21 +75,7 @@ namespace TestApp
 
         public string GetQuestionInfo()
         {
-            string allQuestions = "[";
-
-            foreach (List<string> questions in appQuestions) {
-                if(questions.Count < 2)
-                    continue;
-
-                if (allQuestions.Length > 2)
-                    allQuestions += ",";
-
-                allQuestions += "['" + questions[0] + "','" + questions[1] + "','" + questions[2] + "']";
-            }
-
-            allQuestions += "]";
-
-            return allQuestions;
+            return JsonSerializer.Serialize(appQuestions);
         }
 
         public void SaveQuestions()
@@ -96,5 +84,12 @@ namespace TestApp
             File.WriteAllText(fileName, json);
         }
 
+        public void UpdateFromApi(string data)
+        {
+            this.appQuestions = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(data) ?? new();
+            File.WriteAllText(fileName, data);
+        }
+
     }
 }
+

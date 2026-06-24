@@ -60,7 +60,7 @@ namespace TestApp
 
         private void Button3_Click(object sender, EventArgs e)
         {
-            Form19 form = new(this);
+            Form19 form = new(this, false);
 
             this.Hide();
             form.Show();

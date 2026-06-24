@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace TestApp
@@ -9,7 +10,7 @@ namespace TestApp
     internal class Settings
     {
         readonly List<string> keys = new();
-        readonly List<KeyValuePair<string, string>> pairs;
+        List<KeyValuePair<string, string>> pairs;
         readonly string filePath;
         readonly string fileName;
 
@@ -28,13 +29,14 @@ namespace TestApp
 
             string json = File.ReadAllText(fileName);
 
-            if (json == null)
+            if (string.IsNullOrWhiteSpace(json))
             {
                 this.pairs = new();
-                return;
             }
-
-            this.pairs = Newtonsoft.Json.JsonConvert.DeserializeObject<List<KeyValuePair<string, string>>>(json) ?? new();
+            else
+            {
+                this.pairs = Newtonsoft.Json.JsonConvert.DeserializeObject<List<KeyValuePair<string, string>>>(json) ?? new();
+            }
 
             keys.Add("ActiveGame");
         }
@@ -61,19 +63,13 @@ namespace TestApp
 
         public string GetSettingsInfo()
         {
-            string allSettings = "[";
+            return JsonSerializer.Serialize(pairs);
+        }
 
-            foreach (KeyValuePair<string, string> pair in pairs)
-            {
-                if (allSettings.Length > 2)
-                    allSettings += ",";
-
-                allSettings += "{'" + pair.Key + "':'" + pair.Value + "'}";
-            }
-
-            allSettings += "]";
-
-            return allSettings;
+        public void UpdateFromApi(string data)
+        {
+            this.pairs = Newtonsoft.Json.JsonConvert.DeserializeObject<List<KeyValuePair<string,string>>>(data) ?? new();
+            File.WriteAllText(fileName, data);
         }
 
     }

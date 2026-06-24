@@ -9,7 +9,7 @@ namespace TestApp
 {
     internal class Opdrachten
     {
-        readonly List<string> appOpdrachten;
+        List<string> appOpdrachten;
         readonly string filePath;
         readonly string fileName;
 
@@ -29,7 +29,7 @@ namespace TestApp
 
             string json = File.ReadAllText(fileName);
 
-            if (json == null)
+            if (string.IsNullOrWhiteSpace(json))
             {
                 this.appOpdrachten = new();
                 return;
@@ -40,13 +40,17 @@ namespace TestApp
 
         public List<string> GetOpdrachten()
         {
+            this.appOpdrachten.Sort();
             return this.appOpdrachten;
         }
 
         public bool OpdrachtAlreadyExists(string name)
         {
-            if (appOpdrachten.Contains(name))
-                return true;
+            foreach (string o in appOpdrachten)
+            {
+                if (o.ToLower() == name.ToLower())
+                    return true;
+            }
 
             return false;
         }
@@ -60,19 +64,7 @@ namespace TestApp
 
         public string GetOpdrachtenInfo()
         {
-            string allOpdachten = "[";
-
-            foreach (string opdracht in appOpdrachten)
-            {
-                if (allOpdachten.Length > 2)
-                    allOpdachten += ",";
-
-                allOpdachten += "'" + opdracht + "'";
-            }
-
-            allOpdachten += "]";
-
-            return allOpdachten;
+            return JsonSerializer.Serialize(appOpdrachten);
         }
 
         public void SaveOpdrachten()
@@ -81,5 +73,12 @@ namespace TestApp
             File.WriteAllText(fileName, json);
         }
 
+        public void UpdateFromApi(string data)
+        {
+            this.appOpdrachten = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(data) ?? new();
+            File.WriteAllText(fileName, data);
+        }
+
     }
 }
+

@@ -71,12 +71,12 @@ namespace TestApp
             form.Show();
         }
 
-        private void Button5_Click(object sender, EventArgs e)
+        private async void Button5_Click(object sender, EventArgs e)
         {
             DataSetClass ds = Program.GetInfo();
 
             Api api = ds.GetApiClass();
-            api.SaveData();
+            await api.SaveData();
         }
     }
 }

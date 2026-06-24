@@ -28,6 +28,10 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.buttonsUp = new List<System.Windows.Forms.Button>();
+            this.buttonsDown = new List<System.Windows.Forms.Button>();
+            this.buttonsRemove = new List<System.Windows.Forms.Button>();
+            this.labels = new List<Label>();
             this.button1 = new System.Windows.Forms.Button();
             this.label1 = new System.Windows.Forms.Label();
             this.comboBox1 = new System.Windows.Forms.ComboBox();
@@ -102,6 +106,7 @@
         {
             this.buttonsUp.Clear();
             this.buttonsDown.Clear();
+            this.buttonsRemove.Clear();
             this.labels.Clear();
 
             this.panel1.Controls.Clear();
@@ -162,6 +167,7 @@
 
             this.buttonsUp.Add(currentButtonUp);
             this.buttonsDown.Add(currentButtonDown);
+            this.buttonsRemove.Add(currentButtonRemove);
             this.labels.Add(currentLabel);
         }
 

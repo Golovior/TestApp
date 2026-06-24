@@ -147,10 +147,30 @@ namespace TestApp
             if (questionValue == "")
                 return;
 
+            List<List<string>> testvragen = ds.GetTestVragenClass().GetAllTestVragen();
+
+            string testName = comboBox1.Text;
+
+            foreach(List<string> tv in testvragen)
+            {
+                if (tv[0] != testName)
+                    continue;
+
+                if (tv[2] == questionValue)
+                {
+                    ds.GetTestVragenClass().RemoveTestVragen(tv);
+                    break;
+                }
+            }
+
+            Button2_Click(sender, e);
+            ChangeTest(sender, e);
         }
 
         private void ChangeTest(object sender, EventArgs e)
         {
+            updateElements();
+
             TestVragen testVragen = ds.GetTestVragenClass();
 
             List<List<string>> alleVragen = testVragen.GetAllTestVragen();

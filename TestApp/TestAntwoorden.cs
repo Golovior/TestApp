@@ -9,7 +9,7 @@ namespace TestApp
 {
     internal class TestAntwoorden
     {
-        readonly List<List<string>> appTestAntwoorden;
+        List<List<string>> appTestAntwoorden;
         readonly string filePath;
         readonly string fileName;
 
@@ -29,7 +29,7 @@ namespace TestApp
 
             string json = File.ReadAllText(fileName);
 
-            if (json == null)
+            if (string.IsNullOrWhiteSpace(json))
             {
                 this.appTestAntwoorden = new();
                 return;
@@ -84,22 +84,7 @@ namespace TestApp
 
         public string GetTestAntwoordenInfo()
         {
-            string allTestAntwoorden = "[";
-
-            foreach (List<string> testAntwoorden in appTestAntwoorden)
-            {
-                if (testAntwoorden.Count < 3)
-                    continue;
-
-                if (allTestAntwoorden.Length > 2)
-                    allTestAntwoorden += ",";
-
-                allTestAntwoorden += "['" + testAntwoorden[0] + "','" + testAntwoorden[1] + "','" + testAntwoorden[2] + "','" + testAntwoorden[3] + "','" + testAntwoorden[4] + "']";
-            }
-
-            allTestAntwoorden += "]";
-
-            return allTestAntwoorden;
+            return JsonSerializer.Serialize(appTestAntwoorden);
         }
 
         public void SaveTestAntwoorden()
@@ -108,5 +93,12 @@ namespace TestApp
             File.WriteAllText(fileName, json);
         }
 
+        public void UpdateFromApi(string data)
+        {
+            this.appTestAntwoorden = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(data) ?? new();
+            File.WriteAllText(fileName, data);
+        }
+
     }
 }
+

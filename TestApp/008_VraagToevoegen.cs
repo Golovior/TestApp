@@ -55,14 +55,36 @@ namespace TestApp
 
             Questions questions = this.ds.GetQuestionsClass();
 
-            if (questions.QuestionAlreadyExists(opdracht, question, alfabetisch))
+            if (!questions.QuestionAlreadyExists(opdracht, question))
+            {
+                questions.AddQuestion(opdracht, question, alfabetisch);
+            }
+
+            string antwoord = textBox2.Text;
+            string juistAntwoord = "0";
+
+            if(antwoord == "")
+            {
+                textBox1.Text = "";
+                checkBox1.Checked = false;
+                textBox1.Focus();
+
+                return;
+            }
+
+            if(checkBox2.Checked)
+                juistAntwoord = "1";
+
+            Antwoorden antwoordClass = ds.GetAntwoordenClass();
+
+            if (antwoordClass.AntwoordAlreadyExists(opdracht, question, antwoord))
                 return;
 
-            questions.AddQuestion(opdracht, question, alfabetisch);
+            antwoordClass.AddAntwoord(opdracht, question, antwoord, juistAntwoord);
 
-            textBox1.Text = "";
-            checkBox1.Checked = false;
-            textBox1.Focus();
+            textBox2.Text = "";
+            textBox2.Focus();
+
         }
 
         private void Button2_Click(object sender, EventArgs e)

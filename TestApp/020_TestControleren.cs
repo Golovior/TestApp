@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Menu;
 
 namespace TestApp
 {
@@ -107,9 +108,15 @@ namespace TestApp
 
                 spelerInfo.Add(Convert.ToString(testScore));
                 spelerInfo.Add(timeSpend);
-
                 score.Add(spelerInfo);
             }
+
+            score.Sort(delegate (List<string> a, List<string> b)
+            {
+                string sa = a[1] + a[2];
+                string sb = b[1] + b[2];
+                return sa.CompareTo(sb);
+            });
 
             showResultaten(score);
         }

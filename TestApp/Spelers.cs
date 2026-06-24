@@ -9,7 +9,7 @@ namespace TestApp
 {
     internal class Spelers
     {
-        readonly List<List<string>> appSpelers;
+        List<List<string>> appSpelers;
         readonly string filePath;
         readonly string fileName;
 
@@ -29,7 +29,7 @@ namespace TestApp
 
             string json = File.ReadAllText(fileName);
 
-            if (json == null)
+            if (string.IsNullOrWhiteSpace(json))
             {
                 this.appSpelers = new();
                 return;
@@ -40,6 +40,7 @@ namespace TestApp
 
         public List<List<string>> GetSpelers()
         {
+            appSpelers.Sort((a, b) => a[0].CompareTo(b[0]));
             return this.appSpelers;
         }
 
@@ -47,7 +48,7 @@ namespace TestApp
         {
             foreach(List<string> player in appSpelers)
             {
-                if (player[0] == name)
+                if (player[0].ToLower() == name.ToLower())
                     return true;
             }
 
@@ -80,19 +81,7 @@ namespace TestApp
 
         public string GetSpelersInfo()
         {
-            string allSpelers  = "[";
-
-            foreach (List<string> speler in appSpelers)
-            {
-                if (allSpelers.Length > 2)
-                    allSpelers += ",";
-
-                allSpelers += "['" + speler[0] + "','" + speler[1] + "']";
-            }
-
-            allSpelers += "]";
-
-            return allSpelers;
+            return JsonSerializer.Serialize(appSpelers);
         }
 
         public void SaveSpelers()
@@ -101,5 +90,12 @@ namespace TestApp
             File.WriteAllText(fileName, json);
         }
 
+        public void UpdateFromApi(string data)
+        {
+            this.appSpelers = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(data) ?? new();
+            File.WriteAllText(fileName, data);
+        }
+
     }
 }
+

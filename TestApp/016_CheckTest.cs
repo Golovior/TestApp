@@ -126,6 +126,12 @@ namespace TestApp
                         string error = "Vraag \"" + vraag[2] + "\" heeft niet voor alle spelers een geselecteerd antwoord.";
                         errors.Add(error);
                     }
+
+                    if(playersForQuestionOptions.Count > playersForQuestionOptions.Distinct().Count())
+                    {
+                        string error = "Vraag \"" + vraag[2] + "\" heeft spelers dubbel gekoppeld aan een antwoord.";
+                        errors.Add(error);
+                    }
                 }
 
                 if (mogelijkeAntwoorden.Count == 0)

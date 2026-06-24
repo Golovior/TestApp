@@ -35,6 +35,9 @@
             comboBox1 = new ComboBox();
             label2 = new Label();
             checkBox1 = new CheckBox();
+            textBox2 = new TextBox();
+            label3 = new Label();
+            checkBox2 = new CheckBox();
             SuspendLayout();
             // 
             // label1
@@ -55,7 +58,7 @@
             // 
             // button1
             // 
-            button1.Location = new Point(12, 89);
+            button1.Location = new Point(12, 143);
             button1.Name = "button1";
             button1.Size = new Size(505, 23);
             button1.TabIndex = 2;
@@ -65,7 +68,7 @@
             // 
             // button2
             // 
-            button2.Location = new Point(12, 118);
+            button2.Location = new Point(12, 172);
             button2.Name = "button2";
             button2.Size = new Size(505, 23);
             button2.TabIndex = 3;
@@ -100,11 +103,40 @@
             checkBox1.Text = "Antwoorden alfabetisch";
             checkBox1.UseVisualStyleBackColor = true;
             // 
+            // textBox2
+            // 
+            textBox2.Location = new Point(75, 89);
+            textBox2.Name = "textBox2";
+            textBox2.Size = new Size(442, 23);
+            textBox2.TabIndex = 10;
+            // 
+            // label3
+            // 
+            label3.AutoSize = true;
+            label3.Location = new Point(12, 92);
+            label3.Name = "label3";
+            label3.Size = new Size(63, 15);
+            label3.TabIndex = 9;
+            label3.Text = "Antwoord:";
+            // 
+            // checkBox2
+            // 
+            checkBox2.AutoSize = true;
+            checkBox2.Location = new Point(75, 118);
+            checkBox2.Name = "checkBox2";
+            checkBox2.Size = new Size(103, 19);
+            checkBox2.TabIndex = 12;
+            checkBox2.Text = "Juist antwoord";
+            checkBox2.UseVisualStyleBackColor = true;
+            // 
             // Form3
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(529, 152);
+            ClientSize = new Size(529, 202);
+            Controls.Add(checkBox2);
+            Controls.Add(textBox2);
+            Controls.Add(label3);
             Controls.Add(checkBox1);
             Controls.Add(comboBox1);
             Controls.Add(label2);
@@ -128,5 +160,8 @@
         private ComboBox comboBox1;
         private Label label2;
         private CheckBox checkBox1;
+        private TextBox textBox2;
+        private Label label3;
+        private CheckBox checkBox2;
     }
 }

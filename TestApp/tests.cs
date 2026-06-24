@@ -9,7 +9,7 @@ namespace TestApp
 {
     internal class Tests
     {
-        readonly List<string> appTests;
+        List<string> appTests;
         readonly string filePath;
         readonly string fileName;
 
@@ -29,7 +29,7 @@ namespace TestApp
 
             string json = File.ReadAllText(fileName);
 
-            if (json == null)
+            if (string.IsNullOrWhiteSpace(json))
             {
                 this.appTests = new();
                 return;
@@ -40,20 +40,23 @@ namespace TestApp
 
         public bool TestAlreadyExists(string test)
         {
-            if (appTests.Contains(test))
-                return true;
+            foreach (string t in appTests)
+            {
+                if (t.ToLower() == test.ToLower())
+                    return true;
+            }
 
             return false;
         }
 
         public List<string> GetAllTests()
         {
+            this.appTests.Sort();
             return this.appTests;
         }
 
         public void AddTest(string test)
         {
-
             appTests.Add(test);
 
             this.SaveTests();
@@ -61,25 +64,19 @@ namespace TestApp
 
         public string GetTestInfo()
         {
-            string allTests = "[";
-
-            foreach (string test in appTests)
-            {
-                if (allTests.Length > 2)
-                    allTests += ",";
-
-                allTests += "'" + test + "'";
-            }
-
-            allTests += "]";
-
-            return allTests;
+            return JsonSerializer.Serialize(appTests);
         }
 
         public void SaveTests()
         {
             string json = JsonSerializer.Serialize(appTests);
             File.WriteAllText(fileName, json);
+        }
+
+        public void UpdateFromApi(string data)
+        {
+            this.appTests = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(data) ?? new();
+            File.WriteAllText(fileName, data);
         }
     }
 }

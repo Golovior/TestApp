@@ -19,7 +19,7 @@ namespace TestApp
         readonly string testName;
         string speler = "";
         int currentQuestion = 0;
-        
+
         public Form20(Form previous, string testName, bool saveResult = false)
         {
             this.prev = previous;
@@ -45,7 +45,8 @@ namespace TestApp
         {
             List<List<string>> testVragen = ds.GetTestVragenClass().GetAllTestVragen();
 
-            foreach (List<string> tv in testVragen) {
+            foreach (List<string> tv in testVragen)
+            {
                 if (tv[0] == testName)
                     questions.Add(tv);
             }
@@ -55,32 +56,57 @@ namespace TestApp
         {
             string name = textBox1.Text;
 
-            if(name == "Exit")
+            if (name == "Exit")
             {
                 this.Dispose();
                 this.prev.Show();
                 return;
             }
 
+            Spelers spelersClass = ds.GetSpelersClass();
+            bool foundSpeler = false;
+
+            foreach (List<string> s in spelersClass.GetSpelers())
+            {
+                if (s[0].ToLower() == name.ToLower())
+                    foundSpeler = true;
+            }
+
+            bool madeTest = false;
+
+            TestAntwoorden ta = ds.GetTestAntwoordenClass();
+
+            foreach (List<string> a in ta.GetAllTestAntwoorden())
+            {
+                if (a[0] != testName)
+                    continue;
+
+                if (a[1].ToLower() == name.ToLower())
+                {
+                    madeTest = true;
+                    break;
+                }
+            }
+
+            if ((!foundSpeler || madeTest) && saveResult && !name.StartsWith("speler"))
+                return;
+
             this.speler = name;
             this.currentQuestion = 0;
             label6.Text = DateTime.Now.ToString();
 
-            if (!false)
-            {
-                this.ShowQuestionLayout();
-                this.Button2_Click(sender, e);
-                return;
-            }
+            this.ShowQuestionLayout();
+            this.Button2_Click(sender, e);
+
         }
 
         private void Button2_Click(object sender, EventArgs e)
         {
-            if(this.saveResult && currentQuestion > 0)
+            if (this.saveResult && currentQuestion > 0)
             {
                 bool succesvol = SaveAnswer();
 
-                if(!succesvol)
+                if (!succesvol)
                     return;
             }
 
@@ -105,16 +131,17 @@ namespace TestApp
             if (antwoordKeuze == "")
                 return false;
 
-            foreach(Label al in antwoordLabels)
+            foreach (Label al in antwoordLabels)
             {
                 if (al.Name == "label~" + antwoordKeuze)
                     geselecteerdAntwoord = al.Text;
             }
 
-            if(geselecteerdAntwoord == "")
+            if (geselecteerdAntwoord == "")
                 return false;
 
-            foreach (List<string> q in questions) {
+            foreach (List<string> q in questions)
+            {
                 if (q[2] != currentQuestion)
                     continue;
 
@@ -132,7 +159,7 @@ namespace TestApp
             currentQuestion++;
             List<string> volgendeVraag = new();
 
-            foreach(List<string> question in questions)
+            foreach (List<string> question in questions)
             {
                 if (question[3] != Convert.ToString(currentQuestion))
                     continue;
@@ -140,7 +167,7 @@ namespace TestApp
                 volgendeVraag = question;
             }
 
-            if(volgendeVraag.Count == 0)
+            if (volgendeVraag.Count == 0)
             {
                 EindeTest();
                 return;
@@ -156,8 +183,8 @@ namespace TestApp
             }
 
             List<List<string>> antwoordMogelijkheden = new();
-            
-            foreach(List<string> a in ds.GetAntwoordenClass().GetAntwoorden())
+
+            foreach (List<string> a in ds.GetAntwoordenClass().GetAntwoorden())
             {
                 if (a[0] != volgendeVraag[1])
                     continue;
@@ -171,9 +198,9 @@ namespace TestApp
 
                     bool answerNeeded = false;
 
-                    foreach(string p in pqo)
+                    foreach (string p in pqo)
                     {
-                        if(activePlayers.Contains(p))
+                        if (activePlayers.Contains(p))
                             answerNeeded = true;
                     }
 
@@ -190,7 +217,7 @@ namespace TestApp
             Questions vragen = ds.GetQuestionsClass();
             string alfabetisch = "1";
 
-            foreach(List<string> v in vragen.GetAllQuestions())
+            foreach (List<string> v in vragen.GetAllQuestions())
             {
                 if (v[0] != volgendeVraag[1])
                     continue;
@@ -245,8 +272,9 @@ namespace TestApp
         public void ShowQuestionLayout()
         {
             panel1.Visible = true;
-            
-            label5.Visible = true;
+
+            if (this.saveResult)
+                label5.Visible = true;
 
             label2.Visible = true;
             label3.Visible = true;
@@ -262,6 +290,12 @@ namespace TestApp
         private void CloseApplication(object sender, FormClosingEventArgs e)
         {
             Application.Exit();
+        }
+
+        private void TextBox1_KeyUp(object sender, KeyEventArgs e)
+        {
+            if(e.KeyCode == Keys.Enter)
+                this.Button1_Click(sender, e);
         }
     }
 }

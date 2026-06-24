@@ -9,7 +9,7 @@ namespace TestApp
 {
     internal class TestVragen
     {
-        readonly List<List<string>> appTestVragen;
+        List<List<string>> appTestVragen;
         readonly string filePath;
         readonly string fileName;
 
@@ -29,7 +29,7 @@ namespace TestApp
 
             string json = File.ReadAllText(fileName);
 
-            if (json == null)
+            if (string.IsNullOrWhiteSpace(json))
             {
                 this.appTestVragen = new();
                 return;
@@ -40,21 +40,11 @@ namespace TestApp
 
         public bool QuestionAlreadyExists(string test, string opdracht, string question)
         {
-            for (int i = 0; i < 50; i++)
-            {
-                List<string> currentQuestionInTest = new()
-                {
-                    test,
-                    opdracht,
-                    question,
-                    Convert.ToString(i)
-                };
-
-                if (appTestVragen.Contains(currentQuestionInTest))
-                    return true;
-            }
-
-            return false;
+            return appTestVragen.Any(currentQuestionInTest =>
+                    currentQuestionInTest.Count >= 3
+                    && currentQuestionInTest[0] == test
+                    && currentQuestionInTest[1] == opdracht
+                    && currentQuestionInTest[2] == question);
         }
 
         public List<List<string>> GetAllTestVragen()
@@ -81,26 +71,13 @@ namespace TestApp
         {
             if(appTestVragen.Contains(vraag))
                 appTestVragen.Remove(vraag);
+
+            this.SaveTestVragen();
         }
 
         public string GetTestVragenInfo()
         {
-            string allTestVragen = "[";
-
-            foreach (List<string> testVragen in appTestVragen)
-            {
-                if (testVragen.Count < 3)
-                    continue;
-
-                if (allTestVragen.Length > 2)
-                    allTestVragen += ",";
-
-                allTestVragen += "['" + testVragen[0] + "','" + testVragen[1] + "','" + testVragen[2] + "','" + testVragen[3] + "']";
-            }
-
-            allTestVragen += "]";
-
-            return allTestVragen;
+            return JsonSerializer.Serialize(appTestVragen);
         }
 
         public void SaveTestVragen()
@@ -109,5 +86,12 @@ namespace TestApp
             File.WriteAllText(fileName, json);
         }
 
+        public void UpdateFromApi(string data)
+        {
+            this.appTestVragen = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(data) ?? new();
+            File.WriteAllText(fileName, data);
+        }
+
     }
 }
+

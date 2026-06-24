@@ -26,13 +26,15 @@
             Label currentLabel = new System.Windows.Forms.Label();
 
             int width = 15;
+            int heightOrder = order;
+
             if (order > 8)
             {
                 width += 300;
-                order -= 8;
+                heightOrder -= 8;
             }
 
-            int height = 27 * order;
+            int height = 27 * heightOrder;
             // 
             // checkbox
             // 

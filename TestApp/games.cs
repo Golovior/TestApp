@@ -10,7 +10,7 @@ namespace TestApp
 {
     internal class Games
     {
-        readonly List<string> appGames;
+        List<string> appGames;
         readonly string filePath;
         readonly string fileName;
 
@@ -29,7 +29,7 @@ namespace TestApp
 
             string json = File.ReadAllText(fileName);
 
-            if (json == null)
+            if (string.IsNullOrWhiteSpace(json))
             {
                 this.appGames = new();
                 return;
@@ -53,18 +53,7 @@ namespace TestApp
 
         public string GetGameInfo()
         {
-            string allGames = "[";
-
-            foreach (string game in appGames) {
-                if (allGames.Length > 2)
-                    allGames += ",";
-
-                allGames += "'" + game + "'";
-            }
-
-            allGames += "]";
-
-            return allGames;
+            return JsonSerializer.Serialize(appGames);
         }
 
         public void SaveGames()
@@ -73,5 +62,12 @@ namespace TestApp
             File.WriteAllText(fileName, json);
         }
 
+        public void UpdateFromApi(string data)
+        {
+            this.appGames = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(data) ?? new();
+            File.WriteAllText(fileName, data);
+        }
+
     }
 }
+

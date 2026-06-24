@@ -30,7 +30,7 @@ namespace TestApp
 
             string json = File.ReadAllText(fileName);
 
-            if (json == null)
+            if (string.IsNullOrWhiteSpace(json))
             {
                 this.appAntwoorden = new();
                 return;
@@ -54,7 +54,7 @@ namespace TestApp
                 if (vraag != antwoord[1])
                     continue;
 
-                if (name != antwoord[2])
+                if (name.ToLower() != antwoord[2].ToLower())
                     continue;
 
                 return true;
@@ -81,19 +81,7 @@ namespace TestApp
 
         public string GetAntwoordenInfo()
         {
-            string allAntwoorden = "[";
-
-            foreach (List<string> antwoordSet in appAntwoorden)
-            {
-                if (allAntwoorden.Length > 2)
-                    allAntwoorden += ",";
-
-                allAntwoorden+= "['" + antwoordSet[0] + "','" + antwoordSet[1] + "','" + antwoordSet[2] + "','" + antwoordSet[3] + "','" + antwoordSet[4] + "']";
-            }
-
-            allAntwoorden += "]";
-
-            return allAntwoorden;
+            return JsonSerializer.Serialize(appAntwoorden);
         }
 
         public void SetAsCorrectAntwoord(string opdracht, string vraag, string name)
@@ -140,3 +128,4 @@ namespace TestApp
         }
     }
 }
+
