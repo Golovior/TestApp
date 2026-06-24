@@ -2,7 +2,7 @@
 {
     internal class Game
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
     }
 
@@ -14,57 +14,68 @@
 
     internal class Question
     {
-        public int Id { get; set; }
-        public string Opdracht { get; set; } = string.Empty;
+        public Guid Id { get; set; }
+        public Guid OpdrachtId { get; set; }
+        public Opdracht Opdracht { get; set; } = null!;
         public string Text { get; set; } = string.Empty;
         public string Alphabetical { get; set; } = string.Empty;
+        public List<Answer> Answers { get; set; } = new();
+        public List<TestQuestion> TestQuestions { get; set; } = new();
     }
 
     internal class Answer
     {
-        public int Id { get; set; }
-        public string Opdracht { get; set; } = string.Empty;
-        public string Vraag { get; set; } = string.Empty;
+        public Guid Id { get; set; }
+        public Guid QuestionId { get; set; }
+        public Question Question { get; set; } = null!;
         public string Name { get; set; } = string.Empty;
         public bool IsCorrect { get; set; }
         public string ConnectedPlayersJson { get; set; } = "[]";
+        public List<TestAnswer> TestAnswers { get; set; } = new();
     }
 
     internal class Test
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public List<TestQuestion> TestQuestions { get; set; } = new();
+        public List<TestAnswer> TestAnswers { get; set; } = new();
     }
 
     internal class TestQuestion
     {
-        public int Id { get; set; }
-        public string TestName { get; set; } = string.Empty;
-        public string Opdracht { get; set; } = string.Empty;
-        public string QuestionText { get; set; } = string.Empty;
+        public Guid Id { get; set; }
+        public Guid TestId { get; set; }
+        public Test Test { get; set; } = null!;
+        public Guid QuestionId { get; set; }
+        public Question Question { get; set; } = null!;
         public string Order { get; set; } = string.Empty;
     }
 
     internal class TestAnswer
     {
-        public int Id { get; set; }
-        public string TestName { get; set; } = string.Empty;
-        public string Speler { get; set; } = string.Empty;
-        public string Opdracht { get; set; } = string.Empty;
+        public Guid Id { get; set; }
+        public Guid TestId { get; set; }
+        public Test Test { get; set; } = null!;
+        public Guid PlayerId { get; set; }
+        public Player Player { get; set; } = null!;
+        public Guid? AnswerId { get; set; }
+        public Answer? Answer { get; set; }
         public string QuestionText { get; set; } = string.Empty;
         public string AnswerText { get; set; } = string.Empty;
     }
 
     internal class Player
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Status { get; set; } = "1";
     }
 
     internal class Opdracht
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public List<Question> Questions { get; set; } = new();
     }
 }

@@ -41,6 +41,8 @@ namespace TestApp
                 current.Value = value;
             }
 
+            RecordSyncHelper.TouchRecordTimestamp(db, "settings", new[] { key });
+
             db.SaveChanges();
         }
 
@@ -54,20 +56,33 @@ namespace TestApp
             return JsonSerializer.Serialize(pairs);
         }
 
-        public void UpdateFromApi(string data)
+        public void UpdateFromApi(string data, long? remoteTimestamp = null)
         {
             List<KeyValuePair<string, string>> pairs = Newtonsoft.Json.JsonConvert.DeserializeObject<List<KeyValuePair<string, string>>>(data) ?? new();
 
             using AppDbContext db = new();
             using var transaction = db.Database.BeginTransaction();
-            db.Settings.RemoveRange(db.Settings);
             foreach (KeyValuePair<string, string> pair in pairs)
             {
-                db.Settings.Add(new SettingEntry
+                string[] keyParts = { pair.Key };
+                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "settings", keyParts, remoteTimestamp))
+                    continue;
+
+                SettingEntry? current = db.Settings.SingleOrDefault(x => x.Key == pair.Key);
+                if (current == null)
                 {
-                    Key = pair.Key,
-                    Value = pair.Value
-                });
+                    db.Settings.Add(new SettingEntry
+                    {
+                        Key = pair.Key,
+                        Value = pair.Value
+                    });
+                }
+                else
+                {
+                    current.Value = pair.Value;
+                }
+
+                RecordSyncHelper.TouchRecordTimestamp(db, "settings", keyParts, remoteTimestamp);
             }
 
             db.SaveChanges();

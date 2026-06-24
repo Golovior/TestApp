@@ -47,6 +47,9 @@ namespace TestApp
 
             foreach (List<string> tv in testVragen)
             {
+                if (tv.Count < 4)
+                    continue;
+
                 if (tv[0] == testName)
                     questions.Add(tv);
             }
@@ -157,17 +160,12 @@ namespace TestApp
         private void NextQuestion()
         {
             currentQuestion++;
-            List<string> volgendeVraag = new();
+            List<string>? volgendeVraag = questions
+                .OrderBy(question => int.TryParse(question[3], out int order) ? order : int.MaxValue)
+                .ThenBy(question => question[2])
+                .ElementAtOrDefault(currentQuestion - 1);
 
-            foreach (List<string> question in questions)
-            {
-                if (question[3] != Convert.ToString(currentQuestion))
-                    continue;
-
-                volgendeVraag = question;
-            }
-
-            if (volgendeVraag.Count == 0)
+            if (volgendeVraag == null)
             {
                 EindeTest();
                 return;

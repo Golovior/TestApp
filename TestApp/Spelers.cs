@@ -40,6 +40,7 @@ namespace TestApp
                 Name = name,
                 Status = "1"
             });
+            RecordSyncHelper.TouchRecordTimestamp(db, "spelers", new[] { name });
             db.SaveChanges();
         }
 
@@ -50,6 +51,7 @@ namespace TestApp
             if (speler != null)
             {
                 speler.Status = status;
+                RecordSyncHelper.TouchRecordTimestamp(db, "spelers", new[] { name });
                 db.SaveChanges();
             }
         }
@@ -65,24 +67,37 @@ namespace TestApp
             // Persisted directly on each mutating operation.
         }
 
-        public void UpdateFromApi(string data)
+        public void UpdateFromApi(string data, long? remoteTimestamp = null)
         {
             List<List<string>> rows = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(data) ?? new();
 
             using AppDbContext db = new();
             using var transaction = db.Database.BeginTransaction();
-            db.Players.RemoveRange(db.Players);
 
             foreach (List<string> row in rows)
             {
                 if (row.Count < 2)
                     continue;
 
-                db.Players.Add(new Player
+                string[] keyParts = { row[0] };
+                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "spelers", keyParts, remoteTimestamp))
+                    continue;
+
+                Player? current = db.Players.SingleOrDefault(x => x.Name == row[0]);
+                if (current == null)
                 {
-                    Name = row[0],
-                    Status = row[1]
-                });
+                    db.Players.Add(new Player
+                    {
+                        Name = row[0],
+                        Status = row[1]
+                    });
+                }
+                else
+                {
+                    current.Status = row[1];
+                }
+
+                RecordSyncHelper.TouchRecordTimestamp(db, "spelers", keyParts, remoteTimestamp);
             }
 
             db.SaveChanges();

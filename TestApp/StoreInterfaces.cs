@@ -5,7 +5,7 @@
         bool GameAlreadyExists(string name);
         void AddGame(string name);
         string GetGameInfo();
-        void UpdateFromApi(string data);
+        void UpdateFromApi(string data, long? remoteTimestamp = null);
     }
 
     internal interface IQuestionStore
@@ -14,7 +14,7 @@
         List<List<string>> GetAllQuestions();
         void AddQuestion(string opdracht, string question, string alphabetical);
         string GetQuestionInfo();
-        void UpdateFromApi(string data);
+        void UpdateFromApi(string data, long? remoteTimestamp = null);
     }
 
     internal interface IAnswerStore
@@ -25,7 +25,7 @@
         string GetAntwoordenInfo();
         void SetAsCorrectAntwoord(string opdracht, string vraag, string name);
         void ConnectPlayersToAnswer(string opdracht, string vraag, string antwoord, List<string> spelers);
-        void UpdateFromApi(string data);
+        void UpdateFromApi(string data, long? remoteTimestamp = null);
     }
 
     internal interface ISettingsStore
@@ -33,7 +33,7 @@
         List<string> GetKeys();
         void UpdateSetting(string key, string value);
         string GetSettingsInfo();
-        void UpdateFromApi(string data);
+        void UpdateFromApi(string data, long? remoteTimestamp = null);
     }
 
     internal interface ITestsStore
@@ -42,7 +42,7 @@
         List<string> GetAllTests();
         void AddTest(string test);
         string GetTestInfo();
-        void UpdateFromApi(string data);
+        void UpdateFromApi(string data, long? remoteTimestamp = null);
     }
 
     internal interface IOpdrachtenStore
@@ -51,7 +51,7 @@
         bool OpdrachtAlreadyExists(string name);
         void AddOpdracht(string name);
         string GetOpdrachtenInfo();
-        void UpdateFromApi(string data);
+        void UpdateFromApi(string data, long? remoteTimestamp = null);
     }
 
     internal interface ISpelersStore
@@ -61,7 +61,7 @@
         void AddSpeler(string name);
         void SavePlayerStatus(string name, string status);
         string GetSpelersInfo();
-        void UpdateFromApi(string data);
+        void UpdateFromApi(string data, long? remoteTimestamp = null);
     }
 
     internal interface ITestVragenStore
@@ -71,7 +71,7 @@
         void AddTestVraag(string test, string opdracht, string question, string order);
         void RemoveTestVragen(List<string> vraag);
         string GetTestVragenInfo();
-        void UpdateFromApi(string data);
+        void UpdateFromApi(string data, long? remoteTimestamp = null);
     }
 
     internal interface ITestAntwoordenStore
@@ -81,6 +81,6 @@
         void AddTestAntwoord(string test, string speler, string opdracht, string question, string antwoord);
         void RemoveTestAntwoord(List<string> antwoord);
         string GetTestAntwoordenInfo();
-        void UpdateFromApi(string data);
+        void UpdateFromApi(string data, long? remoteTimestamp = null);
     }
 }

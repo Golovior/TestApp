@@ -31,7 +31,8 @@ namespace TestApp
         public void AddOpdracht(string name)
         {
             using AppDbContext db = new();
-            db.Opdrachten.Add(new Opdracht { Name = name });
+            db.Opdrachten.Add(new Opdracht { Id = Guid.NewGuid(), Name = name });
+            RecordSyncHelper.TouchRecordTimestamp(db, "opdrachten", new[] { name });
             db.SaveChanges();
         }
 
@@ -50,15 +51,24 @@ namespace TestApp
             // Persisted directly on each mutating operation.
         }
 
-        public void UpdateFromApi(string data)
+        public void UpdateFromApi(string data, long? remoteTimestamp = null)
         {
             List<string> values = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(data) ?? new();
 
             using AppDbContext db = new();
             using var transaction = db.Database.BeginTransaction();
-            db.Opdrachten.RemoveRange(db.Opdrachten);
             foreach (string value in values)
-                db.Opdrachten.Add(new Opdracht { Name = value });
+            {
+                string[] keyParts = { value };
+                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "opdrachten", keyParts, remoteTimestamp))
+                    continue;
+
+                bool exists = db.Opdrachten.Any(x => x.Name == value);
+                if (!exists)
+                    db.Opdrachten.Add(new Opdracht { Id = Guid.NewGuid(), Name = value });
+
+                RecordSyncHelper.TouchRecordTimestamp(db, "opdrachten", keyParts, remoteTimestamp);
+            }
 
             db.SaveChanges();
             transaction.Commit();

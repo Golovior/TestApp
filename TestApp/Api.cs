@@ -1,18 +1,87 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Net;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 
 namespace TestApp
 {
     internal class Api
     {
+        private static readonly HttpClient HttpClient = new();
+        private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
+
+        private sealed class ApiSyncRequestDto
+        {
+            public string games { get; set; } = "[]";
+            public string settings { get; set; } = "[]";
+            public string tests { get; set; } = "[]";
+            public string questions { get; set; } = "[]";
+            public string antwoorden { get; set; } = "[]";
+            public string testVragen { get; set; } = "[]";
+            public string opdrachten { get; set; } = "[]";
+            public string testAntwoorden { get; set; } = "[]";
+            public string spelers { get; set; } = "[]";
+        }
+
+        private sealed class ApiSyncResponseDto
+        {
+            public List<string>? games { get; set; }
+            public List<string>? settings { get; set; }
+            public List<string>? tests { get; set; }
+            public List<List<string>>? questions { get; set; }
+            public List<List<string>>? antwoorden { get; set; }
+            public List<List<string>>? testVragen { get; set; }
+            public List<string>? opdrachten { get; set; }
+            public List<List<string>>? testAntwoorden { get; set; }
+            public List<List<string>>? spelers { get; set; }
+
+            public long? gamesTimestampUtc { get; set; }
+            public long? settingsTimestampUtc { get; set; }
+            public long? testsTimestampUtc { get; set; }
+            public long? questionsTimestampUtc { get; set; }
+            public long? antwoordenTimestampUtc { get; set; }
+            public long? testVragenTimestampUtc { get; set; }
+            public long? opdrachtenTimestampUtc { get; set; }
+            public long? testAntwoordenTimestampUtc { get; set; }
+            public long? spelersTimestampUtc { get; set; }
+        }
+
         readonly string baseUrl;
         readonly DataSetClass ds;
+
+
+        private static long? GetRemoteTimestampFromPayload(JObject payloadObject, string tableName)
+        {
+            string[] timestampKeys =
+            {
+                $"{tableName}TimestampUtc",
+                $"{tableName}Timestamp",
+                $"{tableName}UpdatedAtUtc",
+                $"{tableName}UpdatedAt"
+            };
+
+            foreach (string key in timestampKeys)
+            {
+                JToken? token = payloadObject[key];
+                if (token == null)
+                    continue;
+
+                if (token.Type == JTokenType.Integer && token.Value<long?>() is long intValue)
+                    return intValue;
+
+                if (token.Type == JTokenType.String && long.TryParse(token.Value<string>(), out long parsedStringValue))
+                    return parsedStringValue;
+            }
+
+            return null;
+        }
+
+        private static void ApplyRemoteTable(string tableName, string serializedRows, long? remoteTimestamp, Action<string, long?> updateAction)
+        {
+            updateAction(serializedRows, remoteTimestamp);
+        }
 
         public Api(DataSetClass ds) {
             this.baseUrl = "http://widmtimer.fvandenberg.nl/api/";
@@ -22,23 +91,19 @@ namespace TestApp
 
         public async Task SaveData()
         {
-            HttpClient client = new();
-
             string fullUrl = this.baseUrl + "SyncTestAppData";
 
-            client.BaseAddress = new Uri(this.baseUrl);
-
-            Dictionary<string, string> data = new()
+            ApiSyncRequestDto data = new()
             {
-                { "games",  ds.GetGamesClass().GetGameInfo()},
-                { "settings",  ds.GetSettingsClass().GetSettingsInfo()},
-                { "tests", ds.GetTestsClass().GetTestInfo()},
-                { "questions", ds.GetQuestionsClass().GetQuestionInfo()},
-                { "antwoorden", ds.GetAntwoordenClass().GetAntwoordenInfo()},
-                { "testVragen", ds.GetTestVragenClass().GetTestVragenInfo()},
-                { "opdrachten", ds.GetOpdrachtenClass().GetOpdrachtenInfo()},
-                { "testAntwoorden", ds.GetTestAntwoordenClass().GetTestAntwoordenInfo()},
-                { "spelers", ds.GetSpelersClass().GetSpelersInfo()}
+                games = ds.GetGamesClass().GetGameInfo(),
+                settings = ds.GetSettingsClass().GetSettingsInfo(),
+                tests = ds.GetTestsClass().GetTestInfo(),
+                questions = ds.GetQuestionsClass().GetQuestionInfo(),
+                antwoorden = ds.GetAntwoordenClass().GetAntwoordenInfo(),
+                testVragen = ds.GetTestVragenClass().GetTestVragenInfo(),
+                opdrachten = ds.GetOpdrachtenClass().GetOpdrachtenInfo(),
+                testAntwoorden = ds.GetTestAntwoordenClass().GetTestAntwoordenInfo(),
+                spelers = ds.GetSpelersClass().GetSpelersInfo()
             };
 
             string content = Newtonsoft.Json.JsonConvert.SerializeObject(data);
@@ -56,12 +121,27 @@ namespace TestApp
 
             var postData = new StringContent(content,Encoding.UTF8, "application/json");
 
-            var response = await client.PostAsync(fullUrl, postData);
+            string responseString;
 
-            string responseString = await response.Content.ReadAsStringAsync();
+            try
+            {
+                using var cts = new CancellationTokenSource(DefaultTimeout);
+                var response = await HttpClient.PostAsync(fullUrl, postData, cts.Token);
+                response.EnsureSuccessStatusCode();
 
-            if (responseString.StartsWith("Error"))
-                throw new Exception(responseString);
+                responseString = await response.Content.ReadAsStringAsync(cts.Token);
+            }
+            catch (OperationCanceledException ex)
+            {
+                throw new Exception("API sync timed out while sending data.", ex);
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new Exception($"API sync failed: {ex.Message}", ex);
+            }
+
+            if (responseString.StartsWith("Error", StringComparison.OrdinalIgnoreCase))
+                throw new Exception($"API sync returned an error: {responseString}");
 
             string fileNameRecieve = Path.Combine(filePath, "apirecieving.txt");
 
@@ -73,72 +153,98 @@ namespace TestApp
 
             File.WriteAllText(fileNameRecieve, responseString);
 
-            Dictionary<string, JArray> returnedObject = (Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string,JArray>>(responseString) ?? new()) 
-                    ?? throw new Exception("returnObject should not be null here");
+            ApiSyncResponseDto returnedObject;
+            JObject responseObject;
 
-            foreach (KeyValuePair<string, JArray> kvp in returnedObject)
+            try
             {
-                JArray? value = kvp.Value;
+                returnedObject = (Newtonsoft.Json.JsonConvert.DeserializeObject<ApiSyncResponseDto>(responseString) ?? new())
+                    ?? throw new Exception("returnObject should not be null here");
+                responseObject = JObject.Parse(responseString);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("API sync returned invalid JSON payload.", ex);
+            }
 
-                if (value == null)
-                    continue;
+            if (returnedObject.antwoorden != null)
+            {
+                long? antwoordenTimestamp = returnedObject.antwoordenTimestampUtc ?? GetRemoteTimestampFromPayload(responseObject, "antwoorden");
+                ApplyRemoteTable(
+                    "antwoorden",
+                    Newtonsoft.Json.JsonConvert.SerializeObject(returnedObject.antwoorden),
+                    antwoordenTimestamp,
+                    (serializedRows, timestamp) => ds.GetAntwoordenClass().UpdateFromApi(serializedRows, timestamp));
+            }
 
-                switch (kvp.Key)
-                {
-                    case "antwoorden":
-                        if (value.ToObject(objectType: typeof(List<List<string>>)) is not List<List<string>> valuesAntwoorden)
-                            continue;
+            if (returnedObject.games != null)
+            {
+                long? gamesTimestamp = returnedObject.gamesTimestampUtc ?? GetRemoteTimestampFromPayload(responseObject, "games");
+                ApplyRemoteTable(
+                    "games",
+                    Newtonsoft.Json.JsonConvert.SerializeObject(returnedObject.games),
+                    gamesTimestamp,
+                    (serializedRows, timestamp) => ds.GetGamesClass().UpdateFromApi(serializedRows, timestamp));
+            }
 
-                        ds.GetAntwoordenClass().UpdateFromApi(JsonSerializer.Serialize(valuesAntwoorden));
-                        break;
-                    case "games":
-                        if (value.ToObject(objectType: typeof(List<string>)) is not List<string> valuesGames)
-                            continue;
+            if (returnedObject.opdrachten != null)
+            {
+                long? opdrachtenTimestamp = returnedObject.opdrachtenTimestampUtc ?? GetRemoteTimestampFromPayload(responseObject, "opdrachten");
+                ApplyRemoteTable(
+                    "opdrachten",
+                    Newtonsoft.Json.JsonConvert.SerializeObject(returnedObject.opdrachten),
+                    opdrachtenTimestamp,
+                    (serializedRows, timestamp) => ds.GetOpdrachtenClass().UpdateFromApi(serializedRows, timestamp));
+            }
 
-                        ds.GetGamesClass().UpdateFromApi(JsonSerializer.Serialize(valuesGames));
-                        break;
-                    case "opdrachten":
-                        if (value.ToObject(objectType: typeof(List<string>)) is not List<string> valuesOpdrachten)
-                            continue;
+            if (returnedObject.questions != null)
+            {
+                long? questionsTimestamp = returnedObject.questionsTimestampUtc ?? GetRemoteTimestampFromPayload(responseObject, "questions");
+                ApplyRemoteTable(
+                    "questions",
+                    Newtonsoft.Json.JsonConvert.SerializeObject(returnedObject.questions),
+                    questionsTimestamp,
+                    (serializedRows, timestamp) => ds.GetQuestionsClass().UpdateFromApi(serializedRows, timestamp));
+            }
 
-                        ds.GetOpdrachtenClass().UpdateFromApi(JsonSerializer.Serialize(valuesOpdrachten));
-                        break;
-                    case "questions":
-                        if (value.ToObject(objectType: typeof(List<List<string>>)) is not List<List<string>> valuesQuestions)
-                            continue;
+            if (returnedObject.tests != null)
+            {
+                long? testsTimestamp = returnedObject.testsTimestampUtc ?? GetRemoteTimestampFromPayload(responseObject, "tests");
+                ApplyRemoteTable(
+                    "tests",
+                    Newtonsoft.Json.JsonConvert.SerializeObject(returnedObject.tests),
+                    testsTimestamp,
+                    (serializedRows, timestamp) => ds.GetTestsClass().UpdateFromApi(serializedRows, timestamp));
+            }
 
-                        ds.GetQuestionsClass().UpdateFromApi(JsonSerializer.Serialize(valuesQuestions));
-                        break;
-                    case "tests":
-                        if (value.ToObject(objectType: typeof(List<string>)) is not List<string> valuesTests)
-                            continue;
+            if (returnedObject.testVragen != null)
+            {
+                long? testVragenTimestamp = returnedObject.testVragenTimestampUtc ?? GetRemoteTimestampFromPayload(responseObject, "testVragen");
+                ApplyRemoteTable(
+                    "testVragen",
+                    Newtonsoft.Json.JsonConvert.SerializeObject(returnedObject.testVragen),
+                    testVragenTimestamp,
+                    (serializedRows, timestamp) => ds.GetTestVragenClass().UpdateFromApi(serializedRows, timestamp));
+            }
 
-                        ds.GetTestsClass().UpdateFromApi(JsonSerializer.Serialize(valuesTests));
-                        break;
-                    case "settings":
-                        continue;
-                    case "testVragen":
-                        if (value.ToObject(objectType: typeof(List<List<string>>)) is not List<List<string>> valuesTestVragen)
-                            continue;
+            if (returnedObject.testAntwoorden != null)
+            {
+                long? testAntwoordenTimestamp = returnedObject.testAntwoordenTimestampUtc ?? GetRemoteTimestampFromPayload(responseObject, "testAntwoorden");
+                ApplyRemoteTable(
+                    "testAntwoorden",
+                    Newtonsoft.Json.JsonConvert.SerializeObject(returnedObject.testAntwoorden),
+                    testAntwoordenTimestamp,
+                    (serializedRows, timestamp) => ds.GetTestAntwoordenClass().UpdateFromApi(serializedRows, timestamp));
+            }
 
-                        ds.GetTestVragenClass().UpdateFromApi(JsonSerializer.Serialize(valuesTestVragen));
-                        break;
-                    case "testAntwoorden":
-                        if (value.ToObject(objectType: typeof(List<List<string>>)) is not List<List<string>> valuesTestAntwoorden)
-                            continue;
-
-                        ds.GetTestAntwoordenClass().UpdateFromApi(JsonSerializer.Serialize(valuesTestAntwoorden));
-                        break;
-                    case "spelers":
-                        if (value.ToObject(objectType: typeof(List<List<string>>)) is not List<List<string>> valuesSpelers)
-                            continue;
-
-                        ds.GetSpelersClass().UpdateFromApi(JsonSerializer.Serialize(valuesSpelers));
-                        break;
-
-                    default:
-                        throw new Exception("Zou hier niet moeten komen!!");
-                }
+            if (returnedObject.spelers != null)
+            {
+                long? spelersTimestamp = returnedObject.spelersTimestampUtc ?? GetRemoteTimestampFromPayload(responseObject, "spelers");
+                ApplyRemoteTable(
+                    "spelers",
+                    Newtonsoft.Json.JsonConvert.SerializeObject(returnedObject.spelers),
+                    spelersTimestamp,
+                    (serializedRows, timestamp) => ds.GetSpelersClass().UpdateFromApi(serializedRows, timestamp));
             }
             
         }
