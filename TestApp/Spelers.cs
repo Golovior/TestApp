@@ -4,96 +4,89 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace TestApp
 {
-    internal class Spelers
+    internal class Spelers : ISpelersStore
     {
-        List<List<string>> appSpelers;
-        readonly string filePath;
-        readonly string fileName;
-
-        public Spelers()
-        {
-            this.filePath = AppStoragePaths.DataDirectory;
-            this.fileName = Path.Combine(filePath, "spelers.txt");
-
-            if (!Directory.Exists(filePath))
-                Directory.CreateDirectory(filePath);
-
-            if (!File.Exists(fileName))
-            {
-                var createdFile = File.Create(fileName);
-                createdFile.Close();
-            }
-
-            string json = File.ReadAllText(fileName);
-
-            if (string.IsNullOrWhiteSpace(json))
-            {
-                this.appSpelers = new();
-                return;
-            }
-
-            this.appSpelers = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(json) ?? new();
-        }
+        public Spelers() { }
 
         public List<List<string>> GetSpelers()
         {
-            appSpelers.Sort((a, b) => a[0].CompareTo(b[0]));
-            return this.appSpelers;
+            using AppDbContext db = new();
+            return db.Players
+                .AsNoTracking()
+                .OrderBy(x => x.Name)
+                .Select(x => new List<string>
+                {
+                    x.Name,
+                    x.Status
+                })
+                .ToList();
         }
 
         public bool SpelerAlreadyExists(string name)
         {
-            foreach(List<string> player in appSpelers)
-            {
-                if (player[0].ToLower() == name.ToLower())
-                    return true;
-            }
-
-            return false;
+            using AppDbContext db = new();
+            return db.Players.Any(x => x.Name.ToLower() == name.ToLower());
         }
 
         public void AddSpeler(string name)
         {
-            List<string> player = new()
+            using AppDbContext db = new();
+            db.Players.Add(new Player
             {
-                name,
-                "1"
-            };
-
-            appSpelers.Add(player);
-
-            this.SaveSpelers();
+                Name = name,
+                Status = "1"
+            });
+            db.SaveChanges();
         }
 
         public void SavePlayerStatus(string name, string status)
         {
-            foreach (List<string> speler in appSpelers)
+            using AppDbContext db = new();
+            Player? speler = db.Players.SingleOrDefault(x => x.Name == name);
+            if (speler != null)
             {
-                if (speler[0] == name)
-                    speler[1] = status;
+                speler.Status = status;
+                db.SaveChanges();
             }
-
-            this.SaveSpelers();
         }
 
         public string GetSpelersInfo()
         {
+            List<List<string>> appSpelers = GetSpelers();
             return JsonSerializer.Serialize(appSpelers);
         }
 
         public void SaveSpelers()
         {
-            string json = JsonSerializer.Serialize(appSpelers);
-            File.WriteAllText(fileName, json);
+            // Persisted directly on each mutating operation.
         }
 
         public void UpdateFromApi(string data)
         {
-            this.appSpelers = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(data) ?? new();
-            File.WriteAllText(fileName, data);
+            List<List<string>> rows = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(data) ?? new();
+
+            using AppDbContext db = new();
+            using var transaction = db.Database.BeginTransaction();
+            db.Players.RemoveRange(db.Players);
+
+            foreach (List<string> row in rows)
+            {
+                if (row.Count < 2)
+                    continue;
+
+                db.Players.Add(new Player
+                {
+                    Name = row[0],
+                    Status = row[1]
+                });
+            }
+
+            db.SaveChanges();
+            transaction.Commit();
         }
 
     }

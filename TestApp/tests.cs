@@ -4,79 +4,64 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace TestApp
 {
-    internal class Tests
+    internal class Tests : ITestsStore
     {
-        List<string> appTests;
-        readonly string filePath;
-        readonly string fileName;
-
-        public Tests()
-        {
-            this.filePath = AppStoragePaths.DataDirectory;
-            this.fileName = Path.Combine(filePath, "tests.txt");
-
-            if (!Directory.Exists(filePath))
-                Directory.CreateDirectory(filePath);
-
-            if (!File.Exists(fileName))
-            {
-                var createdFile = File.Create(fileName);
-                createdFile.Close();
-            }
-
-            string json = File.ReadAllText(fileName);
-
-            if (string.IsNullOrWhiteSpace(json))
-            {
-                this.appTests = new();
-                return;
-            }
-
-            this.appTests = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(json) ?? new();
-        }
+        public Tests() { }
 
         public bool TestAlreadyExists(string test)
         {
-            foreach (string t in appTests)
-            {
-                if (t.ToLower() == test.ToLower())
-                    return true;
-            }
-
-            return false;
+            using AppDbContext db = new();
+            return db.Tests.Any(x => x.Name.ToLower() == test.ToLower());
         }
 
         public List<string> GetAllTests()
         {
-            this.appTests.Sort();
-            return this.appTests;
+            using AppDbContext db = new();
+            return db.Tests
+                .AsNoTracking()
+                .Select(x => x.Name)
+                .OrderBy(x => x)
+                .ToList();
         }
 
         public void AddTest(string test)
         {
-            appTests.Add(test);
-
-            this.SaveTests();
+            using AppDbContext db = new();
+            db.Tests.Add(new Test { Name = test });
+            db.SaveChanges();
         }
 
         public string GetTestInfo()
         {
+            using AppDbContext db = new();
+            List<string> appTests = db.Tests
+                .AsNoTracking()
+                .Select(x => x.Name)
+                .ToList();
             return JsonSerializer.Serialize(appTests);
         }
 
         public void SaveTests()
         {
-            string json = JsonSerializer.Serialize(appTests);
-            File.WriteAllText(fileName, json);
+            // Persisted directly on each mutating operation.
         }
 
         public void UpdateFromApi(string data)
         {
-            this.appTests = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(data) ?? new();
-            File.WriteAllText(fileName, data);
+            List<string> values = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(data) ?? new();
+
+            using AppDbContext db = new();
+            using var transaction = db.Database.BeginTransaction();
+            db.Tests.RemoveRange(db.Tests);
+            foreach (string value in values)
+                db.Tests.Add(new Test { Name = value });
+
+            db.SaveChanges();
+            transaction.Commit();
         }
     }
 }

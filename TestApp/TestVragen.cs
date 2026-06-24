@@ -4,92 +4,105 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace TestApp
 {
-    internal class TestVragen
+    internal class TestVragen : ITestVragenStore
     {
-        List<List<string>> appTestVragen;
-        readonly string filePath;
-        readonly string fileName;
-
-        public TestVragen()
-        {
-            this.filePath = AppStoragePaths.DataDirectory;
-            this.fileName = Path.Combine(filePath, "testvragen.txt");
-
-            if (!Directory.Exists(filePath))
-                Directory.CreateDirectory(filePath);
-
-            if (!File.Exists(fileName))
-            {
-                var createdFile = File.Create(fileName);
-                createdFile.Close();
-            }
-
-            string json = File.ReadAllText(fileName);
-
-            if (string.IsNullOrWhiteSpace(json))
-            {
-                this.appTestVragen = new();
-                return;
-            }
-
-            this.appTestVragen = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(json) ?? new();
-        }
+        public TestVragen() { }
 
         public bool QuestionAlreadyExists(string test, string opdracht, string question)
         {
-            return appTestVragen.Any(currentQuestionInTest =>
-                    currentQuestionInTest.Count >= 3
-                    && currentQuestionInTest[0] == test
-                    && currentQuestionInTest[1] == opdracht
-                    && currentQuestionInTest[2] == question);
+            using AppDbContext db = new();
+            return db.TestQuestions.Any(x =>
+                x.TestName == test
+                && x.Opdracht == opdracht
+                && x.QuestionText == question);
         }
 
         public List<List<string>> GetAllTestVragen()
         {
-            return this.appTestVragen;
+            using AppDbContext db = new();
+            return db.TestQuestions
+                .AsNoTracking()
+                .Select(x => new List<string>
+                {
+                    x.TestName,
+                    x.Opdracht,
+                    x.QuestionText,
+                    x.Order
+                })
+                .ToList();
         }
 
         public void AddTestVraag(string test, string opdracht, string question, string order)
         {
-            List<string> currentTestVraag = new()
+            using AppDbContext db = new();
+            db.TestQuestions.Add(new TestQuestion
             {
-                test,
-                opdracht,
-                question,
-                order
-            };
-
-            appTestVragen.Add(currentTestVraag);
-
-            this.SaveTestVragen();
+                TestName = test,
+                Opdracht = opdracht,
+                QuestionText = question,
+                Order = order
+            });
+            db.SaveChanges();
         }
 
         public void RemoveTestVragen(List<string> vraag)
         {
-            if(appTestVragen.Contains(vraag))
-                appTestVragen.Remove(vraag);
+            if (vraag.Count < 4)
+                return;
 
-            this.SaveTestVragen();
+            using AppDbContext db = new();
+            TestQuestion? current = db.TestQuestions.FirstOrDefault(x =>
+                x.TestName == vraag[0]
+                && x.Opdracht == vraag[1]
+                && x.QuestionText == vraag[2]
+                && x.Order == vraag[3]);
+
+            if (current != null)
+            {
+                db.TestQuestions.Remove(current);
+                db.SaveChanges();
+            }
         }
 
         public string GetTestVragenInfo()
         {
+            List<List<string>> appTestVragen = GetAllTestVragen();
             return JsonSerializer.Serialize(appTestVragen);
         }
 
         public void SaveTestVragen()
         {
-            string json = JsonSerializer.Serialize(appTestVragen);
-            File.WriteAllText(fileName, json);
+            // Persisted directly on each mutating operation.
         }
 
         public void UpdateFromApi(string data)
         {
-            this.appTestVragen = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(data) ?? new();
-            File.WriteAllText(fileName, data);
+            List<List<string>> rows = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(data) ?? new();
+
+            using AppDbContext db = new();
+            using var transaction = db.Database.BeginTransaction();
+            db.TestQuestions.RemoveRange(db.TestQuestions);
+
+            foreach (List<string> row in rows)
+            {
+                if (row.Count < 4)
+                    continue;
+
+                db.TestQuestions.Add(new TestQuestion
+                {
+                    TestName = row[0],
+                    Opdracht = row[1],
+                    QuestionText = row[2],
+                    Order = row[3]
+                });
+            }
+
+            db.SaveChanges();
+            transaction.Commit();
         }
 
     }

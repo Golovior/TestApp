@@ -5,126 +5,123 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace TestApp
 {
-    internal class Antwoorden
+    internal class Antwoorden : IAnswerStore
     {
-        List<List<string>> appAntwoorden;
-        readonly string filePath;
-        readonly string fileName;
-
-        public Antwoorden()
-        {
-            this.filePath = AppStoragePaths.DataDirectory;
-            this.fileName = Path.Combine(filePath, "antwoorden.txt");
-
-            if (!Directory.Exists(filePath))
-                Directory.CreateDirectory(filePath);
-
-            if (!File.Exists(fileName))
-            {
-                var createdFile = File.Create(fileName);
-                createdFile.Close();
-            }
-
-            string json = File.ReadAllText(fileName);
-
-            if (string.IsNullOrWhiteSpace(json))
-            {
-                this.appAntwoorden = new();
-                return;
-            }
-
-            this.appAntwoorden = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(json) ?? new();
-        }
+        public Antwoorden() { }
 
         public List<List<string>> GetAntwoorden()
         {
-            return this.appAntwoorden;
+            using AppDbContext db = new();
+            return db.Answers
+                .AsNoTracking()
+                .Select(x => new List<string>
+                {
+                    x.Opdracht,
+                    x.Vraag,
+                    x.Name,
+                    x.IsCorrect ? "1" : "0",
+                    x.ConnectedPlayersJson
+                })
+                .ToList();
         }
 
         public bool AntwoordAlreadyExists(string opdracht, string vraag, string name)
         {
-            foreach (List<string> antwoord in this.appAntwoorden)
-            {
-                if (opdracht != antwoord[0])
-                    continue;
-
-                if (vraag != antwoord[1])
-                    continue;
-
-                if (name.ToLower() != antwoord[2].ToLower())
-                    continue;
-
-                return true;
-            }
-
-            return false;
+            using AppDbContext db = new();
+            return db.Answers.Any(x =>
+                x.Opdracht == opdracht
+                && x.Vraag == vraag
+                && x.Name.ToLower() == name.ToLower());
         }
 
         public void AddAntwoord(string opdracht, string vraag, string name, string correct = "0")
         {
-            List<string> antwoord = new()
+            using AppDbContext db = new();
+            db.Answers.Add(new Answer
             {
-                opdracht,
-                vraag,
-                name,
-                correct,
-                "[]"
-            };
-
-            appAntwoorden.Add(antwoord);
-
-            this.SaveAntwoorden();
+                Opdracht = opdracht,
+                Vraag = vraag,
+                Name = name,
+                IsCorrect = correct == "1",
+                ConnectedPlayersJson = "[]"
+            });
+            db.SaveChanges();
         }
 
         public string GetAntwoordenInfo()
         {
+            List<List<string>> appAntwoorden = GetAntwoorden();
             return JsonSerializer.Serialize(appAntwoorden);
         }
 
         public void SetAsCorrectAntwoord(string opdracht, string vraag, string name)
         {
-            foreach (List<string> antwoordSet in appAntwoorden)
+            using AppDbContext db = new();
+            using var transaction = db.Database.BeginTransaction();
+
+            List<Answer> antwoordSets = db.Answers
+                .Where(x => x.Opdracht == opdracht && x.Vraag == vraag)
+                .ToList();
+
+            foreach (Answer antwoordSet in antwoordSets)
             {
-                if (antwoordSet[0] == opdracht && antwoordSet[1] == vraag)
-                {
-                    if (name == antwoordSet[2])
-                        antwoordSet[3] = "1";
-                    else
-                        antwoordSet[3] = "0";
-                }
+                antwoordSet.IsCorrect = name == antwoordSet.Name;
             }
 
-            SaveAntwoorden();
+            db.SaveChanges();
+            transaction.Commit();
         }
 
         public void ConnectPlayersToAnswer(string opdracht, string vraag, string antwoord, List<string> spelers)
         {
             string connectedPlayers = JsonSerializer.Serialize(spelers);
 
-            foreach (List<string> antwoordSet in appAntwoorden)
-            {
-                if (antwoordSet[0] == opdracht && antwoordSet[1] == vraag && antwoordSet[2] == antwoord)
-                {
-                    antwoordSet[4] = connectedPlayers;
-                }
-            }
+            using AppDbContext db = new();
+            Answer? antwoordSet = db.Answers.SingleOrDefault(x =>
+                x.Opdracht == opdracht
+                && x.Vraag == vraag
+                && x.Name == antwoord);
 
-            SaveAntwoorden();
+            if (antwoordSet != null)
+                antwoordSet.ConnectedPlayersJson = connectedPlayers;
+
+            db.SaveChanges();
         }
 
         public void SaveAntwoorden()
         {
-            string json = JsonSerializer.Serialize(appAntwoorden);
-            File.WriteAllText(fileName, json);
+            // Persisted directly on each mutating operation.
         }
 
         public void UpdateFromApi(string data)
         {
-            appAntwoorden = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(data) ?? new();
-            File.WriteAllText(fileName, data);
+            List<List<string>> rows = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(data) ?? new();
+
+            using AppDbContext db = new();
+            using var transaction = db.Database.BeginTransaction();
+            db.Answers.RemoveRange(db.Answers);
+
+            foreach (List<string> row in rows)
+            {
+                if (row.Count < 5)
+                    continue;
+
+                db.Answers.Add(new Answer
+                {
+                    Opdracht = row[0],
+                    Vraag = row[1],
+                    Name = row[2],
+                    IsCorrect = row[3] == "1",
+                    ConnectedPlayersJson = row[4]
+                });
+            }
+
+            db.SaveChanges();
+            transaction.Commit();
         }
     }
 }

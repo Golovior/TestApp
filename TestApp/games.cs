@@ -5,67 +5,52 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace TestApp
 {
-    internal class Games
+    internal class Games : IGameStore
     {
-        List<string> appGames;
-        readonly string filePath;
-        readonly string fileName;
-
-        public Games() {
-            this.filePath = AppStoragePaths.DataDirectory;
-            this.fileName = Path.Combine(filePath, "games.txt");
-
-            if (!Directory.Exists(filePath))
-                Directory.CreateDirectory(filePath);
-
-            if (!File.Exists(fileName))
-            {
-                var createdFile = File.Create(fileName);
-                createdFile.Close();
-            }
-
-            string json = File.ReadAllText(fileName);
-
-            if (string.IsNullOrWhiteSpace(json))
-            {
-                this.appGames = new();
-                return;
-            }
-
-            this.appGames = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(json) ?? new();
-        }
+        public Games() { }
 
         public bool GameAlreadyExists(string name) {
-            if (appGames.Contains(name))
-                return true;
-
-            return false;
+            using AppDbContext db = new();
+            return db.Games.Any(x => x.Name == name);
         }
 
         public void AddGame(string name) {
-            appGames.Add(name);
-
-            this.SaveGames();
+            using AppDbContext db = new();
+            db.Games.Add(new Game { Name = name });
+            db.SaveChanges();
         }
 
         public string GetGameInfo()
         {
+            using AppDbContext db = new();
+            List<string> appGames = db.Games
+                .AsNoTracking()
+                .Select(x => x.Name)
+                .ToList();
             return JsonSerializer.Serialize(appGames);
         }
 
         public void SaveGames()
         {
-            string json = JsonSerializer.Serialize(appGames);
-            File.WriteAllText(fileName, json);
+            // Persisted directly on each mutating operation.
         }
 
         public void UpdateFromApi(string data)
         {
-            this.appGames = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(data) ?? new();
-            File.WriteAllText(fileName, data);
+            List<string> values = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(data) ?? new();
+
+            using AppDbContext db = new();
+            using var transaction = db.Database.BeginTransaction();
+            db.Games.RemoveRange(db.Games);
+            foreach (string value in values)
+                db.Games.Add(new Game { Name = value });
+
+            db.SaveChanges();
+            transaction.Commit();
         }
 
     }
