@@ -111,6 +111,12 @@ namespace TestApp
 
             TestVragen testVragen = ds.GetTestVragenClass();
 
+            if (testVragen.TestIsAfgenomen(test))
+            {
+                MessageBox.Show("Deze test is al afgenomen en kan niet meer aangepast worden.");
+                return;
+            }
+
             if (testVragen.QuestionAlreadyExists(test, opdracht, vraag))
                 return;
 

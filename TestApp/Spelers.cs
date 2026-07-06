@@ -12,17 +12,13 @@ namespace TestApp
     {
         public Spelers() { }
 
-        public List<List<string>> GetSpelers()
+        public List<string> GetSpelers()
         {
             using AppDbContext db = new();
             return db.Players
                 .AsNoTracking()
                 .OrderBy(x => x.Name)
-                .Select(x => new List<string>
-                {
-                    x.Name,
-                    x.Status
-                })
+                .Select(x => x.Name)
                 .ToList();
         }
 
@@ -37,28 +33,15 @@ namespace TestApp
             using AppDbContext db = new();
             db.Players.Add(new Player
             {
-                Name = name,
-                Status = "1"
+                Name = name
             });
             RecordSyncHelper.TouchRecordTimestamp(db, "spelers", new[] { name });
             db.SaveChanges();
         }
 
-        public void SavePlayerStatus(string name, string status)
-        {
-            using AppDbContext db = new();
-            Player? speler = db.Players.SingleOrDefault(x => x.Name == name);
-            if (speler != null)
-            {
-                speler.Status = status;
-                RecordSyncHelper.TouchRecordTimestamp(db, "spelers", new[] { name });
-                db.SaveChanges();
-            }
-        }
-
         public string GetSpelersInfo()
         {
-            List<List<string>> appSpelers = GetSpelers();
+            List<string> appSpelers = GetSpelers();
             return JsonSerializer.Serialize(appSpelers);
         }
 
@@ -69,33 +52,19 @@ namespace TestApp
 
         public void UpdateFromApi(string data, long? remoteTimestamp = null)
         {
-            List<List<string>> rows = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(data) ?? new();
+            List<string> values = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(data) ?? new();
 
             using AppDbContext db = new();
             using var transaction = db.Database.BeginTransaction();
 
-            foreach (List<string> row in rows)
+            foreach (string value in values)
             {
-                if (row.Count < 2)
-                    continue;
-
-                string[] keyParts = { row[0] };
+                string[] keyParts = { value };
                 if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "spelers", keyParts, remoteTimestamp))
                     continue;
 
-                Player? current = db.Players.SingleOrDefault(x => x.Name == row[0]);
-                if (current == null)
-                {
-                    db.Players.Add(new Player
-                    {
-                        Name = row[0],
-                        Status = row[1]
-                    });
-                }
-                else
-                {
-                    current.Status = row[1];
-                }
+                if (!db.Players.Any(x => x.Name == value))
+                    db.Players.Add(new Player { Name = value });
 
                 RecordSyncHelper.TouchRecordTimestamp(db, "spelers", keyParts, remoteTimestamp);
             }

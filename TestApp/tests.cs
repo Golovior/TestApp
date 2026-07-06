@@ -36,6 +36,29 @@ namespace TestApp
             db.SaveChanges();
         }
 
+        public void SetGameForTest(string test, string? game)
+        {
+            using AppDbContext db = new();
+            Test? entity = db.Tests.FirstOrDefault(x => x.Name == test);
+            if (entity == null)
+                return;
+
+            entity.GameId = string.IsNullOrEmpty(game)
+                ? null
+                : db.Games.Where(x => x.Name == game).Select(x => (Guid?)x.Id).FirstOrDefault();
+
+            db.SaveChanges();
+        }
+
+        public string? GetGameForTest(string test)
+        {
+            using AppDbContext db = new();
+            return db.Tests
+                .Where(x => x.Name == test)
+                .Select(x => x.Game != null ? x.Game.Name : null)
+                .FirstOrDefault();
+        }
+
         public string GetTestInfo()
         {
             using AppDbContext db = new();

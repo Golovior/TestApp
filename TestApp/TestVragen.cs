@@ -50,6 +50,12 @@ namespace TestApp
             return questionEntity.Id;
         }
 
+        public bool TestIsAfgenomen(string test)
+        {
+            using AppDbContext db = new();
+            return db.TestAfnamen.Any(x => x.Test.Name == test);
+        }
+
         public bool QuestionAlreadyExists(string test, string opdracht, string question)
         {
             using AppDbContext db = new();
@@ -89,6 +95,10 @@ namespace TestApp
         {
             using AppDbContext db = new();
             Guid testId = EnsureTestId(db, test);
+
+            if (db.TestAfnamen.Any(x => x.TestId == testId))
+                return;
+
             Guid questionId = EnsureQuestionId(db, opdracht, question);
             db.TestQuestions.Add(new TestQuestion
             {
@@ -113,6 +123,9 @@ namespace TestApp
                 .SingleOrDefault();
 
             if (!testId.HasValue)
+                return;
+
+            if (db.TestAfnamen.Any(x => x.TestId == testId.Value))
                 return;
 
             TestQuestion? current = db.TestQuestions.FirstOrDefault(x =>

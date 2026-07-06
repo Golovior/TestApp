@@ -41,7 +41,6 @@ namespace TestApp
             textBox1 = new TextBox();
             label4 = new Label();
             label5 = new Label();
-            label6 = new Label();
             SuspendLayout();
             // 
             // button1
@@ -134,24 +133,13 @@ namespace TestApp
             label5.Size = new Size(194, 228);
             label5.TabIndex = 8;
             label5.Visible = false;
-            // 
-            // label6
-            // 
-            label6.AutoSize = true;
-            label6.Location = new Point(12, 426);
-            label6.Name = "label6";
-            label6.Size = new Size(38, 15);
-            label6.TabIndex = 9;
-            label6.Text = "label6";
-            label6.Visible = false;
-            // 
+            //
             // Form20
-            // 
+            //
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.ActiveCaptionText;
             ClientSize = new Size(800, 450);
-            Controls.Add(label6);
             Controls.Add(label5);
             Controls.Add(label4);
             Controls.Add(label1);
@@ -306,6 +294,5 @@ namespace TestApp
         private TextBox textBox1;
         private Label label4;
         private Label label5;
-        private Label label6;
     }
 }

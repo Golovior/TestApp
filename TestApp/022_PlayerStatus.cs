@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -23,29 +23,83 @@ namespace TestApp
 
             this.ds = Program.GetInfo();
 
-            AddPlayersToPanel();
+            AddGamesToCombobox();
         }
 
-        public void AddPlayersToPanel()
+        private void AddGamesToCombobox()
         {
-            Spelers spelers = ds.GetSpelersClass();
+            foreach (string game in ds.GetGamesClass().GetAllGames())
+                comboBox1.Items.Add(game);
+        }
+
+        private void ComboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            RefreshForGame(comboBox1.Text);
+        }
+
+        private void RefreshForGame(string game)
+        {
+            panel1.Controls.Clear();
+            playersList.Clear();
+            activeList.Clear();
+            inactiveList.Clear();
+            panels.Clear();
+
+            comboBox2.Items.Clear();
+            comboBox2.Text = "";
+
+            if (game == "")
+                return;
+
+            List<string> alreadyAssigned = ds.GetGameSpelersClass().GetSpelersForGame(game)
+                .Select(speler => speler[0])
+                .ToList();
+
+            foreach (string speler in ds.GetSpelersClass().GetSpelers())
+            {
+                if (!alreadyAssigned.Contains(speler))
+                    comboBox2.Items.Add(speler);
+            }
+
+            AddPlayersToPanel(game);
+        }
+
+        public void AddPlayersToPanel(string game)
+        {
+            GameSpelers gameSpelers = ds.GetGameSpelersClass();
 
             int order = 0;
 
-            foreach(List<string> speler in spelers.GetSpelers())
+            foreach (List<string> speler in gameSpelers.GetSpelersForGame(game))
             {
-                bool active = false;
-                if(speler[1] == "1")
-                    active = true;
+                bool active = speler.Count > 1 && speler[1] == "1";
 
                 MakePlayerRow(speler[0], order, active);
                 order++;
             }
         }
 
+        private void Button3_Click(object sender, EventArgs e)
+        {
+            string game = comboBox1.Text;
+            string speler = comboBox2.Text;
+
+            if (game == "" || speler == "")
+                return;
+
+            ds.GetGameSpelersClass().AssignSpelerToGame(game, speler);
+
+            RefreshForGame(game);
+        }
+
         public void Button1_Click(object sender, EventArgs e)
         {
-            Spelers spelers = ds.GetSpelersClass();
+            string game = comboBox1.Text;
+
+            if (game == "")
+                return;
+
+            GameSpelers gameSpelers = ds.GetGameSpelersClass();
 
             foreach(Label l in playersList)
             {
@@ -57,7 +111,7 @@ namespace TestApp
                         continue;
 
                     if (rb.Checked)
-                        spelers.SavePlayerStatus(l.Text, "1");
+                        gameSpelers.SetStatus(game, l.Text, "1");
                 }
 
                 foreach (RadioButton rb in inactiveList)
@@ -66,7 +120,7 @@ namespace TestApp
                         continue;
 
                     if (rb.Checked)
-                        spelers.SavePlayerStatus(l.Text, "0");
+                        gameSpelers.SetStatus(game, l.Text, "0");
                 }
             }
         }

@@ -50,6 +50,12 @@ namespace TestApp
 
             string test = comboBox1.Text;
 
+            if (ds.GetTestsClass().GetGameForTest(test) == null)
+            {
+                MessageBox.Show("Deze test is nog niet aan een spel gekoppeld. Koppel eerst een spel via Test aanmaken.");
+                return;
+            }
+
             Form20 form = new(this, test, this.saveResults);
 
             this.Hide();

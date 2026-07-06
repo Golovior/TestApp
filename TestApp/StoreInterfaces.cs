@@ -3,6 +3,7 @@
     internal interface IGameStore
     {
         bool GameAlreadyExists(string name);
+        List<string> GetAllGames();
         void AddGame(string name);
         string GetGameInfo();
         void UpdateFromApi(string data, long? remoteTimestamp = null);
@@ -41,6 +42,8 @@
         bool TestAlreadyExists(string test);
         List<string> GetAllTests();
         void AddTest(string test);
+        void SetGameForTest(string test, string? game);
+        string? GetGameForTest(string test);
         string GetTestInfo();
         void UpdateFromApi(string data, long? remoteTimestamp = null);
     }
@@ -56,10 +59,9 @@
 
     internal interface ISpelersStore
     {
-        List<List<string>> GetSpelers();
+        List<string> GetSpelers();
         bool SpelerAlreadyExists(string name);
         void AddSpeler(string name);
-        void SavePlayerStatus(string name, string status);
         string GetSpelersInfo();
         void UpdateFromApi(string data, long? remoteTimestamp = null);
     }
@@ -67,6 +69,7 @@
     internal interface ITestVragenStore
     {
         bool QuestionAlreadyExists(string test, string opdracht, string question);
+        bool TestIsAfgenomen(string test);
         List<List<string>> GetAllTestVragen();
         void AddTestVraag(string test, string opdracht, string question, string order);
         void RemoveTestVragen(List<string> vraag);
@@ -76,11 +79,24 @@
 
     internal interface ITestAntwoordenStore
     {
-        bool AntwoordAlreadyExists(string test, string speler, string opdracht, string question, string antwoord);
+        bool TryAddTestAntwoord(Guid testAfnameId, string opdracht, string question, string antwoord);
         List<List<string>> GetAllTestAntwoorden();
-        void AddTestAntwoord(string test, string speler, string opdracht, string question, string antwoord);
-        void RemoveTestAntwoord(List<string> antwoord);
         string GetTestAntwoordenInfo();
         void UpdateFromApi(string data, long? remoteTimestamp = null);
+    }
+
+    internal interface ITestAfnameStore
+    {
+        Guid StartAfname(string test, string speler);
+        void EindeAfname(Guid id);
+        List<List<string>> GetAllTestAfnamen();
+    }
+
+    internal interface IGameSpelersStore
+    {
+        List<List<string>> GetSpelersForGame(string game);
+        void AssignSpelerToGame(string game, string speler);
+        void RemoveSpelerFromGame(string game, string speler);
+        void SetStatus(string game, string speler, string status);
     }
 }

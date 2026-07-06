@@ -147,9 +147,15 @@ namespace TestApp
             if (questionValue == "")
                 return;
 
-            List<List<string>> testvragen = ds.GetTestVragenClass().GetAllTestVragen();
-
             string testName = comboBox1.Text;
+
+            if (ds.GetTestVragenClass().TestIsAfgenomen(testName))
+            {
+                MessageBox.Show("Deze test is al afgenomen en kan niet meer aangepast worden.");
+                return;
+            }
+
+            List<List<string>> testvragen = ds.GetTestVragenClass().GetAllTestVragen();
 
             foreach(List<string> tv in testvragen)
             {
@@ -204,9 +210,15 @@ namespace TestApp
         {
             TestVragen testVragen = ds.GetTestVragenClass();
 
-            List<List<string>> alleVragen = testVragen.GetAllTestVragen();
-
             string test = comboBox1.Text;
+
+            if (testVragen.TestIsAfgenomen(test))
+            {
+                MessageBox.Show("Deze test is al afgenomen en kan niet meer aangepast worden.");
+                return;
+            }
+
+            List<List<string>> alleVragen = testVragen.GetAllTestVragen();
 
             List<List<string>> vraagVoorTest = new();
 

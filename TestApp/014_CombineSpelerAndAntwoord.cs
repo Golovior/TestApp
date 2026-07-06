@@ -36,15 +36,15 @@ namespace TestApp
 
         private void AddPlayersToPanel()
         {
-            List<List<string>> spelers = this.ds.GetSpelersClass().GetSpelers();
+            List<string> spelers = this.ds.GetSpelersClass().GetSpelers();
 
             int order = 0;
 
-            foreach (List<string> speler in spelers)
+            foreach (string speler in spelers)
             {
                 order++;
 
-                AddPlayers(speler[0], order, false);
+                AddPlayers(speler, order, false);
             }
         }
 

@@ -73,8 +73,7 @@ namespace TestApp
             player = new Player
             {
                 Id = Guid.NewGuid(),
-                Name = playerName,
-                Status = "1"
+                Name = playerName
             };
             db.Players.Add(player);
             return player.Id;
@@ -299,10 +298,58 @@ namespace TestApp
                 Log($"testvragen.txt: skipped {skipped} malformed records.");
         }
 
+        private static Guid? FindTestQuestionId(AppDbContext db, Guid testId, Guid questionId)
+        {
+            TestQuestion? local = db.TestQuestions.Local.FirstOrDefault(x => x.TestId == testId && x.QuestionId == questionId);
+            if (local != null)
+                return local.Id;
+
+            return db.TestQuestions
+                .Where(x => x.TestId == testId && x.QuestionId == questionId)
+                .Select(x => (Guid?)x.Id)
+                .FirstOrDefault();
+        }
+
+        private static Guid? FindAnswerId(AppDbContext db, Guid questionId, string answerName)
+        {
+            Answer? local = db.Answers.Local.FirstOrDefault(x => x.QuestionId == questionId && x.Name == answerName);
+            if (local != null)
+                return local.Id;
+
+            return db.Answers
+                .Where(x => x.QuestionId == questionId && x.Name == answerName)
+                .Select(x => (Guid?)x.Id)
+                .FirstOrDefault();
+        }
+
+        // Legacy testantwoorden.txt rows predate the TestAfname (attempt) concept, so all of a
+        // player's legacy answers for a test are grouped into one synthetic attempt. There's no
+        // real historical timestamp to recover, so it's stamped with the import time.
+        private static Guid EnsureLegacyAfnameId(AppDbContext db, Guid testId, Guid playerId, Dictionary<(Guid, Guid), Guid> afnameCache)
+        {
+            if (afnameCache.TryGetValue((testId, playerId), out Guid existing))
+                return existing;
+
+            TestAfname afname = new()
+            {
+                Id = Guid.NewGuid(),
+                TestId = testId,
+                SpelerId = playerId,
+                Starttijd = DateTime.Now,
+                Eindtijd = DateTime.Now
+            };
+
+            db.TestAfnamen.Add(afname);
+            afnameCache[(testId, playerId)] = afname.Id;
+            return afname.Id;
+        }
+
         private static void ImportTestAntwoorden(AppDbContext db)
         {
             List<List<string>> rows = ReadJson<List<List<string>>>("testantwoorden.txt") ?? new();
             int skipped = 0;
+            Dictionary<(Guid, Guid), Guid> afnameCache = new();
+
             foreach (List<string> row in rows)
             {
                 if (row.Count < 5)
@@ -320,23 +367,40 @@ namespace TestApp
                 Guid testId = EnsureTestId(db, row[0]);
                 Guid playerId = EnsurePlayerId(db, row[1]);
                 Guid questionId = EnsureQuestionId(db, row[2], row[3]);
-                Guid? answerId = db.Answers.Where(x => x.QuestionId == questionId && x.Name == row[4]).Select(x => (Guid?)x.Id).SingleOrDefault();
 
-                if (db.TestAnswers.Any(x =>
-                    x.TestId == testId
-                    && x.PlayerId == playerId
-                    && x.QuestionText == row[3]
-                    && x.AnswerText == row[4]))
+                // Rows whose question isn't part of the test (this also filters out the old
+                // "einde Test / Tijd gespendeerd" elapsed-time marker rows, which never were a
+                // real test question) can't be represented under the new model, and are skipped.
+                Guid? testQuestionId = FindTestQuestionId(db, testId, questionId);
+                if (!testQuestionId.HasValue)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                Guid? answerId = FindAnswerId(db, questionId, row[4]);
+                if (!answerId.HasValue)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                Guid afnameId = EnsureLegacyAfnameId(db, testId, playerId, afnameCache);
+
+                bool alreadyImported = db.TestAnswers.Local.Any(x =>
+                        x.TestAfnameId == afnameId && x.TestQuestionId == testQuestionId.Value)
+                    || db.TestAnswers.Any(x =>
+                        x.TestAfnameId == afnameId && x.TestQuestionId == testQuestionId.Value);
+
+                if (alreadyImported)
                     continue;
 
                 db.TestAnswers.Add(new TestAnswer
                 {
                     Id = Guid.NewGuid(),
-                    TestId = testId,
-                    PlayerId = playerId,
-                    AnswerId = answerId,
-                    QuestionText = row[3],
-                    AnswerText = row[4]
+                    TestAfnameId = afnameId,
+                    TestQuestionId = testQuestionId.Value,
+                    AnswerId = answerId.Value
                 });
             }
 
@@ -387,11 +451,12 @@ namespace TestApp
                 if (db.Players.Any(x => x.Name == row[0]))
                     continue;
 
+                // row[1] was the legacy global active/inactive flag; there's no per-game
+                // home to migrate it into, so it's intentionally dropped on import.
                 db.Players.Add(new Player
                 {
                     Id = Guid.NewGuid(),
-                    Name = row[0],
-                    Status = row[1]
+                    Name = row[0]
                 });
             }
 

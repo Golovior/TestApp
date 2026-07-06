@@ -47,11 +47,17 @@ namespace TestApp
             if (testName == "")
                 return;
 
+            string? gameName = ds.GetTestsClass().GetGameForTest(testName);
+
+            if (gameName == null)
+            {
+                MessageBox.Show("Deze test is nog niet aan een spel gekoppeld. Koppel eerst een spel via Test aanmaken.");
+                return;
+            }
+
             List<List<string>> testVragen = ds.GetTestVragenClass().GetAllTestVragen();
-            List<List<string>> allPlayers = ds.GetSpelersClass().GetSpelers();
 
             List<List<string>> vragen = new();
-            List<string> activePlayers = new();
 
             foreach(List<string> questions in testVragen)
             {
@@ -59,11 +65,10 @@ namespace TestApp
                     vragen.Add(questions);
             }
 
-            foreach(List<string> speler in allPlayers)
-            {
-                if (speler[1] == "1")
-                    activePlayers.Add(speler[0]);
-            }
+            List<string> activePlayers = ds.GetGameSpelersClass().GetSpelersForGame(gameName)
+                .Where(speler => speler.Count > 1 && speler[1] == "1")
+                .Select(speler => speler[0])
+                .ToList();
 
             activePlayers.Sort();
             List<List<string>> antwoorden = ds.GetAntwoordenClass().GetAntwoorden();

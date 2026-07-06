@@ -15,10 +15,78 @@ namespace TestApp
         readonly Form prev;
         readonly DataSetClass ds;
         readonly List<List<string>> questions = new();
+        readonly List<List<string>> displayableQuestions = new();
         readonly bool saveResult;
         readonly string testName;
+        readonly string gameName;
         string speler = "";
         int currentQuestion = 0;
+        Guid? currentAfnameId;
+
+        private List<List<string>> GetSortedQuestions()
+        {
+            return questions
+                .Where(question => question.Count >= 4)
+                .OrderBy(question => int.TryParse(question[3], out int order) ? order : int.MaxValue)
+                .ThenBy(question => question[2])
+                .ToList();
+        }
+
+        private List<List<string>> GetDisplayableQuestions()
+        {
+            List<List<string>> sortedQuestions = GetSortedQuestions();
+            List<List<string>> filteredQuestions = new();
+
+            List<string> activePlayers = ds.GetGameSpelersClass().GetSpelersForGame(gameName)
+                .Where(speler => speler.Count > 1 && speler[1] == "1")
+                .Select(speler => speler[0])
+                .ToList();
+
+            List<List<string>> allAntwoorden = ds.GetAntwoordenClass().GetAntwoorden();
+
+            foreach (List<string> vraag in sortedQuestions)
+            {
+                bool hasAnswerOption = false;
+
+                foreach (List<string> a in allAntwoorden)
+                {
+                    if (a.Count < 3)
+                        continue;
+
+                    if (a[0] != vraag[1])
+                        continue;
+
+                    if (a[1] != vraag[2])
+                        continue;
+
+                    string connectedPlayersRaw = a.Count > 4 ? a[4] : "[]";
+
+                    if (connectedPlayersRaw.Length > 4)
+                    {
+                        List<string> pqo = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(connectedPlayersRaw) ?? new();
+
+                        bool answerNeeded = false;
+
+                        foreach (string p in pqo)
+                        {
+                            if (activePlayers.Contains(p))
+                                answerNeeded = true;
+                        }
+
+                        if (!answerNeeded)
+                            continue;
+                    }
+
+                    hasAnswerOption = true;
+                    break;
+                }
+
+                if (hasAnswerOption)
+                    filteredQuestions.Add(vraag);
+            }
+
+            return filteredQuestions;
+        }
 
         public Form20(Form previous, string testName, bool saveResult = false)
         {
@@ -28,6 +96,7 @@ namespace TestApp
 
             ds = Program.GetInfo();
             this.testName = testName;
+            this.gameName = ds.GetTestsClass().GetGameForTest(testName) ?? string.Empty;
 
             questions.Clear();
 
@@ -69,9 +138,9 @@ namespace TestApp
             Spelers spelersClass = ds.GetSpelersClass();
             bool foundSpeler = false;
 
-            foreach (List<string> s in spelersClass.GetSpelers())
+            foreach (string s in spelersClass.GetSpelers())
             {
-                if (s[0].ToLower() == name.ToLower())
+                if (s.ToLower() == name.ToLower())
                     foundSpeler = true;
             }
 
@@ -96,7 +165,12 @@ namespace TestApp
 
             this.speler = name;
             this.currentQuestion = 0;
-            label6.Text = DateTime.Now.ToString();
+            this.displayableQuestions.Clear();
+            this.displayableQuestions.AddRange(GetDisplayableQuestions());
+
+            this.currentAfnameId = this.saveResult
+                ? ds.GetTestAfnamenClass().StartAfname(testName, name)
+                : null;
 
             this.ShowQuestionLayout();
             this.Button2_Click(sender, e);
@@ -118,7 +192,6 @@ namespace TestApp
 
         private bool SaveAnswer()
         {
-            string currentQuestion = label3.Text;
             TestAntwoorden testAntwoorden = ds.GetTestAntwoordenClass();
             string antwoordKeuze = "";
             string geselecteerdAntwoord = "";
@@ -143,104 +216,90 @@ namespace TestApp
             if (geselecteerdAntwoord == "")
                 return false;
 
-            foreach (List<string> q in questions)
-            {
-                if (q[2] != currentQuestion)
-                    continue;
+            List<string>? currentVraag = displayableQuestions.ElementAtOrDefault(currentQuestion - 1);
 
-                if (testAntwoorden.AntwoordAlreadyExists(q[0], speler, q[1], q[2], geselecteerdAntwoord))
-                    return false;
+            if (currentVraag == null || !currentAfnameId.HasValue)
+                return false;
 
-                testAntwoorden.AddTestAntwoord(q[0], speler, q[1], q[2], geselecteerdAntwoord);
-            }
-
-            return true;
+            return testAntwoorden.TryAddTestAntwoord(currentAfnameId.Value, currentVraag[1], currentVraag[2], geselecteerdAntwoord);
         }
 
         private void NextQuestion()
         {
-            currentQuestion++;
-            List<string>? volgendeVraag = questions
-                .OrderBy(question => int.TryParse(question[3], out int order) ? order : int.MaxValue)
-                .ThenBy(question => question[2])
-                .ElementAtOrDefault(currentQuestion - 1);
+            List<List<string>> sortedQuestions = displayableQuestions;
 
-            if (volgendeVraag == null)
+            while (currentQuestion < sortedQuestions.Count)
             {
-                EindeTest();
-                return;
-            }
+                currentQuestion++;
+                List<string> volgendeVraag = sortedQuestions[currentQuestion - 1];
 
-            List<List<string>> allPlayers = ds.GetSpelersClass().GetSpelers();
-            List<string> activePlayers = new();
+                List<string> activePlayers = ds.GetGameSpelersClass().GetSpelersForGame(gameName)
+                    .Where(speler => speler.Count > 1 && speler[1] == "1")
+                    .Select(speler => speler[0])
+                    .ToList();
 
-            foreach (List<string> speler in allPlayers)
-            {
-                if (speler[1] == "1")
-                    activePlayers.Add(speler[0]);
-            }
+                List<List<string>> antwoordMogelijkheden = new();
 
-            List<List<string>> antwoordMogelijkheden = new();
-
-            foreach (List<string> a in ds.GetAntwoordenClass().GetAntwoorden())
-            {
-                if (a[0] != volgendeVraag[1])
-                    continue;
-
-                if (a[1] != volgendeVraag[2])
-                    continue;
-
-                if (a[4].Length > 4)
+                foreach (List<string> a in ds.GetAntwoordenClass().GetAntwoorden())
                 {
-                    List<string> pqo = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(a[4]) ?? new();
+                    if (a.Count < 3)
+                        continue;
 
-                    bool answerNeeded = false;
+                    if (a[0] != volgendeVraag[1])
+                        continue;
 
-                    foreach (string p in pqo)
+                    if (a[1] != volgendeVraag[2])
+                        continue;
+
+                    string connectedPlayersRaw = a.Count > 4 ? a[4] : "[]";
+
+                    if (connectedPlayersRaw.Length > 4)
                     {
-                        if (activePlayers.Contains(p))
-                            answerNeeded = true;
+                        List<string> pqo = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(connectedPlayersRaw) ?? new();
+
+                        bool answerNeeded = false;
+
+                        foreach (string p in pqo)
+                        {
+                            if (activePlayers.Contains(p))
+                                answerNeeded = true;
+                        }
+
+                        if (!answerNeeded)
+                            continue;
                     }
 
-                    if (!answerNeeded)
-                        continue;
+                    antwoordMogelijkheden.Add(a);
                 }
 
-                antwoordMogelijkheden.Add(a);
-            }
+                if (antwoordMogelijkheden.Count == 0)
+                    continue;
 
-            if (antwoordMogelijkheden.Count == 0)
+                Questions vragen = ds.GetQuestionsClass();
+                string alfabetisch = "1";
+
+                foreach (List<string> v in vragen.GetAllQuestions())
+                {
+                    if (v[0] != volgendeVraag[1])
+                        continue;
+
+                    if (v[1] != volgendeVraag[2])
+                        continue;
+
+                    alfabetisch = v[2];
+                }
+
+                ShowNextQuestion(currentQuestion, volgendeVraag[2], antwoordMogelijkheden, alfabetisch);
                 return;
-
-            Questions vragen = ds.GetQuestionsClass();
-            string alfabetisch = "1";
-
-            foreach (List<string> v in vragen.GetAllQuestions())
-            {
-                if (v[0] != volgendeVraag[1])
-                    continue;
-
-                if (v[1] != volgendeVraag[2])
-                    continue;
-
-                alfabetisch = v[2];
             }
 
-            ShowNextQuestion(currentQuestion, volgendeVraag[2], antwoordMogelijkheden, alfabetisch);
+            EindeTest();
         }
 
         private void EindeTest()
         {
-            TestAntwoorden testAntwoorden = ds.GetTestAntwoordenClass();
-
-            DateTime starttime = DateTime.Parse(label6.Text);
-            DateTime endTime = DateTime.Now;
-
-            TimeSpan span = endTime - starttime;
-
-            string ms = Convert.ToString(span.TotalSeconds);
-
-            testAntwoorden.AddTestAntwoord(testName, speler, "einde Test", "Tijd gespendeerd", ms);
+            if (this.saveResult && this.currentAfnameId.HasValue)
+                ds.GetTestAfnamenClass().EindeAfname(this.currentAfnameId.Value);
 
             ShowStartup();
         }

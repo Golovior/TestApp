@@ -18,6 +18,12 @@ namespace TestApp
             return db.Games.Any(x => x.Name == name);
         }
 
+        public List<string> GetAllGames()
+        {
+            using AppDbContext db = new();
+            return db.Games.AsNoTracking().Select(x => x.Name).OrderBy(x => x).ToList();
+        }
+
         public void AddGame(string name) {
             using AppDbContext db = new();
             db.Games.Add(new Game { Id = Guid.NewGuid(), Name = name });

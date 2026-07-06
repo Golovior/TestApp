@@ -16,6 +16,8 @@ namespace TestApp
         readonly Tests tests = new();
         readonly TestVragen testVragen = new();
         readonly TestAntwoorden testAntwoorden = new();
+        readonly TestAfnamen testAfnamen = new();
+        readonly GameSpelers gameSpelers = new();
         readonly Spelers spelers = new();
         readonly Api api;
 
@@ -61,6 +63,16 @@ namespace TestApp
         public TestAntwoorden GetTestAntwoordenClass()
         {
             return testAntwoorden;
+        }
+
+        public TestAfnamen GetTestAfnamenClass()
+        {
+            return testAfnamen;
+        }
+
+        public GameSpelers GetGameSpelersClass()
+        {
+            return gameSpelers;
         }
 
         public Spelers GetSpelersClass()
