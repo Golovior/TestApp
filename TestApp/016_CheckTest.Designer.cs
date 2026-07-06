@@ -1,4 +1,4 @@
-﻿namespace TestApp
+namespace TestApp
 {
     partial class Form17
     {
@@ -36,26 +36,27 @@
             panel1 = new Panel();
             errors = new List<Label>();
             SuspendLayout();
-            // 
+            //
             // label1
-            // 
+            //
             label1.AutoSize = true;
             label1.Location = new Point(12, 15);
             label1.Name = "label1";
             label1.Size = new Size(27, 15);
             label1.TabIndex = 0;
             label1.Text = "Test";
-            // 
+            //
             // label2
-            // 
+            //
             label2.AutoSize = true;
             label2.Location = new Point(66, 38);
             label2.Name = "label2";
             label2.Size = new Size(0, 15);
             label2.TabIndex = 1;
-            // 
+            //
             // button1
-            // 
+            //
+            button1.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             button1.Location = new Point(11, 149);
             button1.Name = "button1";
             button1.Size = new Size(673, 23);
@@ -63,9 +64,10 @@
             button1.Text = "Check test";
             button1.UseVisualStyleBackColor = true;
             button1.Click += Button1_Click;
-            // 
+            //
             // button2
-            // 
+            //
+            button2.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             button2.Location = new Point(11, 178);
             button2.Name = "button2";
             button2.Size = new Size(673, 23);
@@ -73,24 +75,26 @@
             button2.Text = "Terug";
             button2.UseVisualStyleBackColor = true;
             button2.Click += Button2_Click;
-            // 
+            //
             // comboBox1
-            // 
+            //
+            comboBox1.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             comboBox1.FormattingEnabled = true;
             comboBox1.Location = new Point(66, 12);
             comboBox1.Name = "comboBox1";
             comboBox1.Size = new Size(619, 23);
             comboBox1.TabIndex = 4;
-            // 
+            //
             // panel1
-            // 
+            //
+            panel1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             panel1.Location = new Point(12, 41);
             panel1.Name = "panel1";
             panel1.Size = new Size(673, 102);
             panel1.TabIndex = 5;
-            // 
+            //
             // Form17
-            // 
+            //
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(697, 213);
@@ -121,12 +125,13 @@
             int width = 15;
 
             int height = 20 * order;
-            // 
+            //
             // label1
-            // 
+            //
+            currentLabel.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             currentLabel.Location = new System.Drawing.Point(width, height);
             currentLabel.Name = "label~" + order;
-            currentLabel.Size = new System.Drawing.Size(650, 18);
+            currentLabel.Size = new System.Drawing.Size(this.panel1.ClientSize.Width - width - 5, 18);
             currentLabel.TabIndex = 2;
             currentLabel.Text = error;
 

@@ -1,4 +1,4 @@
-﻿namespace TestApp
+namespace TestApp
 {
     partial class Form4
     {
@@ -36,35 +36,38 @@
             comboBox1 = new ComboBox();
             comboBox2 = new ComboBox();
             label3 = new Label();
+            contentPanel = new Panel();
+            tableLayoutPanel1 = new TableLayoutPanel();
+            tableLayoutPanel1.SuspendLayout();
             SuspendLayout();
-            // 
+            //
             // label1
-            // 
+            //
             label1.AutoSize = true;
             label1.Location = new Point(12, 15);
             label1.Name = "label1";
             label1.Size = new Size(60, 15);
             label1.TabIndex = 0;
             label1.Text = "Opdracht:";
-            // 
+            //
             // label2
-            // 
+            //
             label2.AutoSize = true;
             label2.Location = new Point(12, 73);
             label2.Name = "label2";
             label2.Size = new Size(63, 15);
             label2.TabIndex = 2;
             label2.Text = "Antwoord:";
-            // 
+            //
             // textBox1
-            // 
+            //
             textBox1.Location = new Point(81, 70);
             textBox1.Name = "textBox1";
             textBox1.Size = new Size(472, 23);
             textBox1.TabIndex = 3;
-            // 
+            //
             // button1
-            // 
+            //
             button1.Location = new Point(12, 99);
             button1.Name = "button1";
             button1.Size = new Size(540, 23);
@@ -72,9 +75,9 @@
             button1.Text = "Antwoord toevoegen";
             button1.UseVisualStyleBackColor = true;
             button1.Click += Button1_Click;
-            // 
+            //
             // button2
-            // 
+            //
             button2.Location = new Point(12, 128);
             button2.Name = "button2";
             button2.Size = new Size(540, 23);
@@ -82,49 +85,76 @@
             button2.Text = "Terug";
             button2.UseVisualStyleBackColor = true;
             button2.Click += Button2_Click;
-            // 
+            //
             // comboBox1
-            // 
+            //
             comboBox1.FormattingEnabled = true;
             comboBox1.Location = new Point(81, 12);
             comboBox1.Name = "comboBox1";
             comboBox1.Size = new Size(472, 23);
             comboBox1.TabIndex = 1;
             comboBox1.SelectedIndexChanged += ComboBox1_SelectedIndexChanged;
-            // 
+            //
             // comboBox2
-            // 
+            //
             comboBox2.FormattingEnabled = true;
             comboBox2.Location = new Point(81, 41);
             comboBox2.Name = "comboBox2";
             comboBox2.Size = new Size(472, 23);
             comboBox2.TabIndex = 7;
-            // 
+            //
             // label3
-            // 
+            //
             label3.AutoSize = true;
             label3.Location = new Point(12, 44);
             label3.Name = "label3";
             label3.Size = new Size(40, 15);
             label3.TabIndex = 6;
             label3.Text = "Vraag:";
-            // 
+            //
+            // contentPanel
+            //
+            contentPanel.Controls.Add(comboBox2);
+            contentPanel.Controls.Add(label3);
+            contentPanel.Controls.Add(button2);
+            contentPanel.Controls.Add(button1);
+            contentPanel.Controls.Add(textBox1);
+            contentPanel.Controls.Add(label2);
+            contentPanel.Controls.Add(comboBox1);
+            contentPanel.Controls.Add(label1);
+            contentPanel.Location = new Point(0, 0);
+            contentPanel.Margin = new Padding(0);
+            contentPanel.Name = "contentPanel";
+            contentPanel.Size = new Size(564, 164);
+            contentPanel.TabIndex = 0;
+            //
+            // tableLayoutPanel1
+            //
+            tableLayoutPanel1.ColumnCount = 3;
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayoutPanel1.RowCount = 3;
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            tableLayoutPanel1.Controls.Add(contentPanel, 1, 1);
+            tableLayoutPanel1.Dock = DockStyle.Fill;
+            tableLayoutPanel1.Location = new Point(0, 0);
+            tableLayoutPanel1.Name = "tableLayoutPanel1";
+            tableLayoutPanel1.Size = new Size(1024, 720);
+            tableLayoutPanel1.TabIndex = 8;
+            //
             // Form4
-            // 
+            //
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(564, 164);
-            Controls.Add(comboBox2);
-            Controls.Add(label3);
-            Controls.Add(button2);
-            Controls.Add(button1);
-            Controls.Add(textBox1);
-            Controls.Add(label2);
-            Controls.Add(comboBox1);
-            Controls.Add(label1);
+            ClientSize = new Size(1024, 720);
+            Controls.Add(tableLayoutPanel1);
             Name = "Form4";
             Text = "Antwoord mogelijkheden toevoegen";
             FormClosing += CloseApplication;
+            tableLayoutPanel1.ResumeLayout(false);
             ResumeLayout(false);
             PerformLayout();
         }
@@ -139,5 +169,7 @@
         private ComboBox comboBox1;
         private ComboBox comboBox2;
         private Label label3;
+        private Panel contentPanel;
+        private TableLayoutPanel tableLayoutPanel1;
     }
 }

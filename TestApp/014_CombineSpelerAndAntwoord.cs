@@ -10,7 +10,7 @@ using System.Windows.Forms;
 
 namespace TestApp
 {
-    public partial class CombineSpelerAndAntwoordForm : Form
+    public partial class CombineSpelerAndAntwoordForm : BaseForm
     {
         readonly Form prev;
         readonly DataSetClass ds;

@@ -10,7 +10,7 @@ using System.Windows.Forms;
 
 namespace TestApp
 {
-    public partial class JuistAntwoordSelecteren : Form
+    public partial class JuistAntwoordSelecteren : BaseForm
     {
 
         readonly Form prev;

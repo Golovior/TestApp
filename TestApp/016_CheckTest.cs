@@ -11,7 +11,7 @@ using System.Windows.Forms;
 
 namespace TestApp
 {
-    public partial class Form17 : Form
+    public partial class Form17 : BaseForm
     {
         readonly Form prev;
         readonly DataSetClass ds;

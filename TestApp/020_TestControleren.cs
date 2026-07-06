@@ -12,7 +12,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement.Menu;
 
 namespace TestApp
 {
-    public partial class Form21 : Form
+    public partial class Form21 : BaseForm
     {
         readonly Form prev;
         readonly DataSetClass ds;

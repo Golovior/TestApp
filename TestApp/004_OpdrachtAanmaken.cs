@@ -10,7 +10,7 @@ using System.Windows.Forms;
 
 namespace TestApp
 {
-    public partial class OpdrachtAanmakenForm : Form
+    public partial class OpdrachtAanmakenForm : BaseForm
     {
         readonly Form prev;
         readonly DataSetClass ds;

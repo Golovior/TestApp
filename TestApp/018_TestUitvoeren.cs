@@ -10,7 +10,7 @@ using System.Windows.Forms;
 
 namespace TestApp
 {
-    public partial class Form19 : Form
+    public partial class Form19 : BaseForm
     {
         readonly Form prev;
         readonly DataSetClass ds;

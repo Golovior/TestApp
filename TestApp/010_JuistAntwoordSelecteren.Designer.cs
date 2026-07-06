@@ -1,4 +1,4 @@
-﻿namespace TestApp
+namespace TestApp
 {
     partial class JuistAntwoordSelecteren
     {
@@ -38,45 +38,48 @@
             button2 = new Button();
             panel1 = new Panel();
             SuspendLayout();
-            // 
+            //
             // label1
-            // 
+            //
             label1.AutoSize = true;
             label1.Location = new Point(12, 15);
             label1.Name = "label1";
             label1.Size = new Size(57, 15);
             label1.TabIndex = 0;
             label1.Text = "Opdracht";
-            // 
+            //
             // label2
-            // 
+            //
             label2.AutoSize = true;
             label2.Location = new Point(12, 44);
             label2.Name = "label2";
             label2.Size = new Size(37, 15);
             label2.TabIndex = 1;
             label2.Text = "Vraag";
-            // 
+            //
             // comboBox1
-            // 
+            //
+            comboBox1.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             comboBox1.FormattingEnabled = true;
             comboBox1.Location = new Point(84, 12);
             comboBox1.Name = "comboBox1";
             comboBox1.Size = new Size(419, 23);
             comboBox1.TabIndex = 2;
             comboBox1.SelectedIndexChanged += SelectedOpdracht;
-            // 
+            //
             // comboBox2
-            // 
+            //
+            comboBox2.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             comboBox2.FormattingEnabled = true;
             comboBox2.Location = new Point(84, 41);
             comboBox2.Name = "comboBox2";
             comboBox2.Size = new Size(419, 23);
             comboBox2.TabIndex = 3;
             comboBox2.SelectedIndexChanged += ChangeQuestion;
-            // 
+            //
             // button1
-            // 
+            //
+            button1.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             button1.Location = new Point(12, 317);
             button1.Name = "button1";
             button1.Size = new Size(491, 23);
@@ -84,9 +87,10 @@
             button1.Text = "Opslaan";
             button1.UseVisualStyleBackColor = true;
             button1.Click += Button1_Click;
-            // 
+            //
             // button2
-            // 
+            //
+            button2.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             button2.Location = new Point(12, 346);
             button2.Name = "button2";
             button2.Size = new Size(491, 23);
@@ -94,16 +98,17 @@
             button2.Text = "Terug";
             button2.UseVisualStyleBackColor = true;
             button2.Click += Button2_Click;
-            // 
+            //
             // panel1
-            // 
+            //
+            panel1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             panel1.Location = new Point(12, 70);
             panel1.Name = "panel1";
             panel1.Size = new Size(491, 241);
             panel1.TabIndex = 6;
-            // 
+            //
             // JuistAntwoordSelecteren
-            // 
+            //
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(517, 380);
@@ -143,9 +148,9 @@
             }
 
             int height = 27 * order;
-            // 
+            //
             // checkbox
-            // 
+            //
             currentCheckbox.Location = new System.Drawing.Point(width, height);
             currentCheckbox.Name = "correct~" + order;
             currentCheckbox.Size = new System.Drawing.Size(20, 20);
@@ -155,9 +160,9 @@
             {
                 currentCheckbox.Checked = true;
             }
-            // 
+            //
             // label1
-            // 
+            //
             currentLabel.Location = new System.Drawing.Point(width + 20, height + 4);
             currentLabel.Name = "label~" + order;
             currentLabel.Size = new System.Drawing.Size(250, 18);

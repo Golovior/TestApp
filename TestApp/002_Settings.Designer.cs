@@ -1,4 +1,4 @@
-﻿namespace TestApp
+namespace TestApp
 {
     partial class SettingsForm
     {
@@ -36,10 +36,13 @@
             fontDialog1 = new FontDialog();
             button6 = new Button();
             button7 = new Button();
+            contentPanel = new Panel();
+            tableLayoutPanel1 = new TableLayoutPanel();
+            tableLayoutPanel1.SuspendLayout();
             SuspendLayout();
-            // 
+            //
             // button1
-            // 
+            //
             button1.Location = new Point(12, 12);
             button1.Name = "button1";
             button1.Size = new Size(153, 23);
@@ -47,9 +50,9 @@
             button1.Text = "Spel aanmaken";
             button1.UseVisualStyleBackColor = true;
             button1.Click += Button1_Click;
-            // 
+            //
             // button3
-            // 
+            //
             button3.Location = new Point(12, 157);
             button3.Name = "button3";
             button3.Size = new Size(153, 23);
@@ -57,9 +60,9 @@
             button3.Text = "Settings";
             button3.UseVisualStyleBackColor = true;
             button3.Click += Button3_Click;
-            // 
+            //
             // button4
-            // 
+            //
             button4.Location = new Point(12, 186);
             button4.Name = "button4";
             button4.Size = new Size(153, 23);
@@ -67,9 +70,9 @@
             button4.Text = "Terug";
             button4.UseVisualStyleBackColor = true;
             button4.Click += Button4_Click;
-            // 
+            //
             // button2
-            // 
+            //
             button2.Location = new Point(12, 99);
             button2.Name = "button2";
             button2.Size = new Size(153, 23);
@@ -77,9 +80,9 @@
             button2.Text = "Opdracht aanmaken";
             button2.UseVisualStyleBackColor = true;
             button2.Click += Button2_Click;
-            // 
+            //
             // button5
-            // 
+            //
             button5.Location = new Point(12, 128);
             button5.Name = "button5";
             button5.Size = new Size(153, 23);
@@ -87,9 +90,9 @@
             button5.Text = "Informatie syncen";
             button5.UseVisualStyleBackColor = true;
             button5.Click += Button5_Click;
-            // 
+            //
             // button6
-            // 
+            //
             button6.Location = new Point(12, 41);
             button6.Name = "button6";
             button6.Size = new Size(153, 23);
@@ -97,9 +100,9 @@
             button6.Text = "Spelers toevoegen";
             button6.UseVisualStyleBackColor = true;
             button6.Click += Button6_Click;
-            // 
+            //
             // button7
-            // 
+            //
             button7.Location = new Point(12, 70);
             button7.Name = "button7";
             button7.Size = new Size(153, 23);
@@ -107,22 +110,49 @@
             button7.Text = "Spelers status";
             button7.UseVisualStyleBackColor = true;
             button7.Click += Button7_Click;
-            // 
+            //
+            // contentPanel
+            //
+            contentPanel.Controls.Add(button7);
+            contentPanel.Controls.Add(button6);
+            contentPanel.Controls.Add(button5);
+            contentPanel.Controls.Add(button2);
+            contentPanel.Controls.Add(button4);
+            contentPanel.Controls.Add(button3);
+            contentPanel.Controls.Add(button1);
+            contentPanel.Location = new Point(0, 0);
+            contentPanel.Margin = new Padding(0);
+            contentPanel.Name = "contentPanel";
+            contentPanel.Size = new Size(174, 221);
+            contentPanel.TabIndex = 0;
+            //
+            // tableLayoutPanel1
+            //
+            tableLayoutPanel1.ColumnCount = 3;
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayoutPanel1.RowCount = 3;
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            tableLayoutPanel1.Controls.Add(contentPanel, 1, 1);
+            tableLayoutPanel1.Dock = DockStyle.Fill;
+            tableLayoutPanel1.Location = new Point(0, 0);
+            tableLayoutPanel1.Name = "tableLayoutPanel1";
+            tableLayoutPanel1.Size = new Size(1024, 720);
+            tableLayoutPanel1.TabIndex = 8;
+            //
             // SettingsForm
-            // 
+            //
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(174, 221);
-            Controls.Add(button7);
-            Controls.Add(button6);
-            Controls.Add(button5);
-            Controls.Add(button2);
-            Controls.Add(button4);
-            Controls.Add(button3);
-            Controls.Add(button1);
+            ClientSize = new Size(1024, 720);
+            Controls.Add(tableLayoutPanel1);
             Name = "SettingsForm";
             Text = "Form6";
             FormClosing += CloseApplication;
+            tableLayoutPanel1.ResumeLayout(false);
             ResumeLayout(false);
         }
 
@@ -136,5 +166,7 @@
         private FontDialog fontDialog1;
         private Button button6;
         private Button button7;
+        private Panel contentPanel;
+        private TableLayoutPanel tableLayoutPanel1;
     }
 }

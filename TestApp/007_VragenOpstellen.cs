@@ -10,7 +10,7 @@ using System.Windows.Forms;
 
 namespace TestApp
 {
-    public partial class Form2 : Form
+    public partial class Form2 : BaseForm
     {
         readonly Form previous;
 
