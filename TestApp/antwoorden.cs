@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -82,22 +81,17 @@ namespace TestApp
         {
             using AppDbContext db = new();
             Guid questionId = EnsureQuestionId(db, opdracht, vraag);
+            Guid id = Guid.NewGuid();
             db.Answers.Add(new Answer
             {
-                Id = Guid.NewGuid(),
+                Id = id,
                 QuestionId = questionId,
                 Name = name,
                 IsCorrect = correct == "1",
                 ConnectedPlayersJson = "[]"
             });
-            RecordSyncHelper.TouchRecordTimestamp(db, "antwoorden", new[] { opdracht, vraag, name });
+            RecordSyncHelper.TouchRecordTimestamp(db, "antwoorden", id.ToString());
             db.SaveChanges();
-        }
-
-        public string GetAntwoordenInfo()
-        {
-            List<List<string>> appAntwoorden = GetAntwoorden();
-            return JsonSerializer.Serialize(appAntwoorden);
         }
 
         public void SetAsCorrectAntwoord(string opdracht, string vraag, string name)
@@ -120,7 +114,7 @@ namespace TestApp
             foreach (Answer antwoordSet in antwoordSets)
             {
                 antwoordSet.IsCorrect = name == antwoordSet.Name;
-                RecordSyncHelper.TouchRecordTimestamp(db, "antwoorden", new[] { opdracht, vraag, antwoordSet.Name });
+                RecordSyncHelper.TouchRecordTimestamp(db, "antwoorden", antwoordSet.Id.ToString());
             }
 
             db.SaveChanges();
@@ -147,7 +141,7 @@ namespace TestApp
             if (antwoordSet != null)
             {
                 antwoordSet.ConnectedPlayersJson = connectedPlayers;
-                RecordSyncHelper.TouchRecordTimestamp(db, "antwoorden", new[] { opdracht, vraag, antwoord });
+                RecordSyncHelper.TouchRecordTimestamp(db, "antwoorden", antwoordSet.Id.ToString());
             }
 
             db.SaveChanges();
@@ -158,48 +152,57 @@ namespace TestApp
             // Persisted directly on each mutating operation.
         }
 
-        public void UpdateFromApi(string data, long? remoteTimestamp = null)
+        public List<AnswerSyncDto> GetForSync()
         {
-            List<List<string>> rows = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(data) ?? new();
-
             using AppDbContext db = new();
-            using var transaction = db.Database.BeginTransaction();
-
-            foreach (List<string> row in rows)
+            List<AnswerSyncDto> rows = db.Answers.AsNoTracking().Select(x => new AnswerSyncDto
             {
-                if (row.Count < 5)
+                Id = x.Id,
+                QuestionId = x.QuestionId,
+                Name = x.Name,
+                IsCorrect = x.IsCorrect,
+                ConnectedPlayersJson = x.ConnectedPlayersJson
+            }).ToList();
+
+            foreach (AnswerSyncDto row in rows)
+                row.UpdatedAtUtc = RecordSyncHelper.GetRecordTimestamp(db, "antwoorden", row.Id.ToString()) ?? 0;
+
+            return rows;
+        }
+
+        public void ApplyFromSync(List<AnswerSyncDto> rows)
+        {
+            using AppDbContext db = new();
+
+            foreach (AnswerSyncDto row in rows)
+            {
+                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "antwoorden", row.Id.ToString(), row.UpdatedAtUtc))
                     continue;
 
-                string[] keyParts = { row[0], row[1], row[2] };
-                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "antwoorden", keyParts, remoteTimestamp))
-                    continue;
-
-                Guid questionId = EnsureQuestionId(db, row[0], row[1]);
-
-                Answer? current = db.Answers.SingleOrDefault(x => x.QuestionId == questionId && x.Name == row[2]);
-                if (current == null)
+                Answer? existing = db.Answers.Find(row.Id);
+                if (existing == null)
                 {
                     db.Answers.Add(new Answer
                     {
-                        Id = Guid.NewGuid(),
-                        QuestionId = questionId,
-                        Name = row[2],
-                        IsCorrect = row[3] == "1",
-                        ConnectedPlayersJson = row[4]
+                        Id = row.Id,
+                        QuestionId = row.QuestionId,
+                        Name = row.Name,
+                        IsCorrect = row.IsCorrect,
+                        ConnectedPlayersJson = row.ConnectedPlayersJson
                     });
                 }
                 else
                 {
-                    current.IsCorrect = row[3] == "1";
-                    current.ConnectedPlayersJson = row[4];
+                    existing.QuestionId = row.QuestionId;
+                    existing.Name = row.Name;
+                    existing.IsCorrect = row.IsCorrect;
+                    existing.ConnectedPlayersJson = row.ConnectedPlayersJson;
                 }
 
-                RecordSyncHelper.TouchRecordTimestamp(db, "antwoorden", keyParts, remoteTimestamp);
+                RecordSyncHelper.TouchRecordTimestamp(db, "antwoorden", row.Id.ToString(), row.UpdatedAtUtc);
             }
 
             db.SaveChanges();
-            transaction.Commit();
         }
     }
 }
-

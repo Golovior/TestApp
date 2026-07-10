@@ -59,6 +59,7 @@ namespace TestApp
             };
 
             db.TestAfnamen.Add(afname);
+            RecordSyncHelper.TouchRecordTimestamp(db, "testAfnamen", afname.Id.ToString());
             db.SaveChanges();
             return afname.Id;
         }
@@ -71,6 +72,7 @@ namespace TestApp
                 return;
 
             afname.Eindtijd = DateTime.Now;
+            RecordSyncHelper.TouchRecordTimestamp(db, "testAfnamen", afname.Id.ToString());
             db.SaveChanges();
         }
 
@@ -90,6 +92,62 @@ namespace TestApp
                     x.Jokers.HasValue ? x.Jokers.Value.ToString(CultureInfo.InvariantCulture) : string.Empty
                 })
                 .ToList();
+        }
+
+        public List<TestAfnameSyncDto> GetForSync()
+        {
+            using AppDbContext db = new();
+            List<TestAfnameSyncDto> rows = db.TestAfnamen.AsNoTracking().Select(x => new TestAfnameSyncDto
+            {
+                Id = x.Id,
+                TestId = x.TestId,
+                SpelerId = x.SpelerId,
+                Starttijd = x.Starttijd,
+                Eindtijd = x.Eindtijd,
+                Jokers = x.Jokers
+            }).ToList();
+
+            foreach (TestAfnameSyncDto row in rows)
+                row.UpdatedAtUtc = RecordSyncHelper.GetRecordTimestamp(db, "testAfnamen", row.Id.ToString()) ?? 0;
+
+            return rows;
+        }
+
+        public void ApplyFromSync(List<TestAfnameSyncDto> rows)
+        {
+            using AppDbContext db = new();
+
+            foreach (TestAfnameSyncDto row in rows)
+            {
+                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "testAfnamen", row.Id.ToString(), row.UpdatedAtUtc))
+                    continue;
+
+                TestAfname? existing = db.TestAfnamen.Find(row.Id);
+                if (existing == null)
+                {
+                    db.TestAfnamen.Add(new TestAfname
+                    {
+                        Id = row.Id,
+                        TestId = row.TestId,
+                        SpelerId = row.SpelerId,
+                        Starttijd = row.Starttijd,
+                        Eindtijd = row.Eindtijd,
+                        Jokers = row.Jokers
+                    });
+                }
+                else
+                {
+                    existing.TestId = row.TestId;
+                    existing.SpelerId = row.SpelerId;
+                    existing.Starttijd = row.Starttijd;
+                    existing.Eindtijd = row.Eindtijd;
+                    existing.Jokers = row.Jokers;
+                }
+
+                RecordSyncHelper.TouchRecordTimestamp(db, "testAfnamen", row.Id.ToString(), row.UpdatedAtUtc);
+            }
+
+            db.SaveChanges();
         }
     }
 }

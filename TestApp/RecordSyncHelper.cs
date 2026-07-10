@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Microsoft.EntityFrameworkCore;
 
 namespace TestApp
 {
@@ -10,35 +11,44 @@ namespace TestApp
             return Convert.ToBase64String(bytes);
         }
 
-        public static string BuildRecordKey(string tableName, params string[] parts)
+        // "recordKey" is the row's real identity: a Guid.ToString() for every
+        // Guid-keyed table, or the raw Key string for the SettingEntry table
+        // (whose primary key is a string, not a Guid).
+        public static string BuildRecordKey(string tableName, string recordKey)
         {
-            string joined = string.Join(":", parts.Select(EncodePart));
-            return $"SyncRecord:{tableName}:{joined}";
+            return $"SyncRecord:{tableName}:{EncodePart(recordKey)}";
         }
 
         public static long GetCurrentUnixTimeSeconds() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
-        public static bool ShouldApplyRemoteRecord(AppDbContext db, string tableName, string[] keyParts, long? remoteTimestamp)
+        public static long? GetRecordTimestamp(AppDbContext db, string tableName, string recordKey)
+        {
+            string key = BuildRecordKey(tableName, recordKey);
+            SettingEntry? entry = db.Settings.AsNoTracking().SingleOrDefault(x => x.Key == key);
+
+            if (entry == null || !long.TryParse(entry.Value, out long localTimestamp))
+                return null;
+
+            return localTimestamp;
+        }
+
+        public static bool ShouldApplyRemoteRecord(AppDbContext db, string tableName, string recordKey, long? remoteTimestamp)
         {
             if (!remoteTimestamp.HasValue)
                 return true;
 
-            string key = BuildRecordKey(tableName, keyParts);
-            SettingEntry? entry = db.Settings.SingleOrDefault(x => x.Key == key);
+            long? localTimestamp = GetRecordTimestamp(db, tableName, recordKey);
 
-            if (entry == null)
+            if (!localTimestamp.HasValue)
                 return true;
 
-            if (!long.TryParse(entry.Value, out long localTimestamp))
-                return true;
-
-            return remoteTimestamp.Value >= localTimestamp;
+            return remoteTimestamp.Value >= localTimestamp.Value;
         }
 
-        public static void TouchRecordTimestamp(AppDbContext db, string tableName, string[] keyParts, long? timestamp = null)
+        public static void TouchRecordTimestamp(AppDbContext db, string tableName, string recordKey, long? timestamp = null)
         {
             long value = timestamp ?? GetCurrentUnixTimeSeconds();
-            string key = BuildRecordKey(tableName, keyParts);
+            string key = BuildRecordKey(tableName, recordKey);
             SettingEntry? entry = db.Settings.SingleOrDefault(x => x.Key == key);
 
             if (entry == null)

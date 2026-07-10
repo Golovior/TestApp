@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -31,19 +30,10 @@ namespace TestApp
         public void AddOpdracht(string name)
         {
             using AppDbContext db = new();
-            db.Opdrachten.Add(new Opdracht { Id = Guid.NewGuid(), Name = name });
-            RecordSyncHelper.TouchRecordTimestamp(db, "opdrachten", new[] { name });
+            Guid id = Guid.NewGuid();
+            db.Opdrachten.Add(new Opdracht { Id = id, Name = name });
+            RecordSyncHelper.TouchRecordTimestamp(db, "opdrachten", id.ToString());
             db.SaveChanges();
-        }
-
-        public string GetOpdrachtenInfo()
-        {
-            using AppDbContext db = new();
-            List<string> appOpdrachten = db.Opdrachten
-                .AsNoTracking()
-                .Select(x => x.Name)
-                .ToList();
-            return JsonSerializer.Serialize(appOpdrachten);
         }
 
         public void SaveOpdrachten()
@@ -51,29 +41,40 @@ namespace TestApp
             // Persisted directly on each mutating operation.
         }
 
-        public void UpdateFromApi(string data, long? remoteTimestamp = null)
+        public List<OpdrachtSyncDto> GetForSync()
         {
-            List<string> values = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(data) ?? new();
-
             using AppDbContext db = new();
-            using var transaction = db.Database.BeginTransaction();
-            foreach (string value in values)
+            List<OpdrachtSyncDto> rows = db.Opdrachten.AsNoTracking().Select(x => new OpdrachtSyncDto
             {
-                string[] keyParts = { value };
-                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "opdrachten", keyParts, remoteTimestamp))
+                Id = x.Id,
+                Name = x.Name
+            }).ToList();
+
+            foreach (OpdrachtSyncDto row in rows)
+                row.UpdatedAtUtc = RecordSyncHelper.GetRecordTimestamp(db, "opdrachten", row.Id.ToString()) ?? 0;
+
+            return rows;
+        }
+
+        public void ApplyFromSync(List<OpdrachtSyncDto> rows)
+        {
+            using AppDbContext db = new();
+
+            foreach (OpdrachtSyncDto row in rows)
+            {
+                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "opdrachten", row.Id.ToString(), row.UpdatedAtUtc))
                     continue;
 
-                bool exists = db.Opdrachten.Any(x => x.Name == value);
-                if (!exists)
-                    db.Opdrachten.Add(new Opdracht { Id = Guid.NewGuid(), Name = value });
+                Opdracht? existing = db.Opdrachten.Find(row.Id);
+                if (existing == null)
+                    db.Opdrachten.Add(new Opdracht { Id = row.Id, Name = row.Name });
+                else
+                    existing.Name = row.Name;
 
-                RecordSyncHelper.TouchRecordTimestamp(db, "opdrachten", keyParts, remoteTimestamp);
+                RecordSyncHelper.TouchRecordTimestamp(db, "opdrachten", row.Id.ToString(), row.UpdatedAtUtc);
             }
 
             db.SaveChanges();
-            transaction.Commit();
         }
-
     }
 }
-

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Metadata.Ecma335;
@@ -54,20 +54,16 @@ namespace TestApp
         public void AddQuestion(string opdracht, string question, string alphabetical) {
             using AppDbContext db = new();
             Guid opdrachtId = EnsureOpdrachtId(db, opdracht);
+            Guid id = Guid.NewGuid();
             db.Questions.Add(new Question
             {
+                Id = id,
                 OpdrachtId = opdrachtId,
                 Text = question,
                 Alphabetical = alphabetical
             });
-            RecordSyncHelper.TouchRecordTimestamp(db, "questions", new[] { opdracht, question });
+            RecordSyncHelper.TouchRecordTimestamp(db, "questions", id.ToString());
             db.SaveChanges();
-        }
-
-        public string GetQuestionInfo()
-        {
-            List<List<string>> appQuestions = GetAllQuestions();
-            return JsonSerializer.Serialize(appQuestions);
         }
 
         public void SaveQuestions()
@@ -75,45 +71,54 @@ namespace TestApp
             // Persisted directly on each mutating operation.
         }
 
-        public void UpdateFromApi(string data, long? remoteTimestamp = null)
+        public List<QuestionSyncDto> GetForSync()
         {
-            List<List<string>> rows = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(data) ?? new();
-
             using AppDbContext db = new();
-            using var transaction = db.Database.BeginTransaction();
-
-            foreach (List<string> row in rows)
+            List<QuestionSyncDto> rows = db.Questions.AsNoTracking().Select(x => new QuestionSyncDto
             {
-                if (row.Count < 3)
+                Id = x.Id,
+                OpdrachtId = x.OpdrachtId,
+                Text = x.Text,
+                Alphabetical = x.Alphabetical
+            }).ToList();
+
+            foreach (QuestionSyncDto row in rows)
+                row.UpdatedAtUtc = RecordSyncHelper.GetRecordTimestamp(db, "questions", row.Id.ToString()) ?? 0;
+
+            return rows;
+        }
+
+        public void ApplyFromSync(List<QuestionSyncDto> rows)
+        {
+            using AppDbContext db = new();
+
+            foreach (QuestionSyncDto row in rows)
+            {
+                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "questions", row.Id.ToString(), row.UpdatedAtUtc))
                     continue;
 
-                string[] keyParts = { row[0], row[1] };
-                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "questions", keyParts, remoteTimestamp))
-                    continue;
-
-                Guid opdrachtId = EnsureOpdrachtId(db, row[0]);
-                Question? current = db.Questions.SingleOrDefault(x => x.OpdrachtId == opdrachtId && x.Text == row[1]);
-                if (current == null)
+                Question? existing = db.Questions.Find(row.Id);
+                if (existing == null)
                 {
                     db.Questions.Add(new Question
                     {
-                        OpdrachtId = opdrachtId,
-                        Text = row[1],
-                        Alphabetical = row[2]
+                        Id = row.Id,
+                        OpdrachtId = row.OpdrachtId,
+                        Text = row.Text,
+                        Alphabetical = row.Alphabetical
                     });
                 }
                 else
                 {
-                    current.Alphabetical = row[2];
+                    existing.OpdrachtId = row.OpdrachtId;
+                    existing.Text = row.Text;
+                    existing.Alphabetical = row.Alphabetical;
                 }
 
-                RecordSyncHelper.TouchRecordTimestamp(db, "questions", keyParts, remoteTimestamp);
+                RecordSyncHelper.TouchRecordTimestamp(db, "questions", row.Id.ToString(), row.UpdatedAtUtc);
             }
 
             db.SaveChanges();
-            transaction.Commit();
         }
-
     }
 }
-

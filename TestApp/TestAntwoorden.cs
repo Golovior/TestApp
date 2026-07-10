@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,40 +9,6 @@ namespace TestApp
     internal class TestAntwoorden : ITestAntwoordenStore
     {
         public TestAntwoorden() { }
-
-        private static Guid EnsureTestId(AppDbContext db, string testName)
-        {
-            Test? test = db.Tests
-                .OrderBy(x => x.Name)
-                .ThenBy(x => x.Id)
-                .FirstOrDefault(x => x.Name == testName);
-            if (test != null)
-                return test.Id;
-
-            test = new Test { Id = Guid.NewGuid(), Name = testName };
-            db.Tests.Add(test);
-            db.SaveChanges();
-            return test.Id;
-        }
-
-        private static Guid EnsurePlayerId(AppDbContext db, string speler)
-        {
-            Player? player = db.Players
-                .OrderBy(x => x.Name)
-                .ThenBy(x => x.Id)
-                .FirstOrDefault(x => x.Name == speler);
-            if (player != null)
-                return player.Id;
-
-            player = new Player
-            {
-                Id = Guid.NewGuid(),
-                Name = speler
-            };
-            db.Players.Add(player);
-            db.SaveChanges();
-            return player.Id;
-        }
 
         // Resolves the specific TestQuestion + Answer for (opdracht, question, antwoord) within
         // the test that the given TestAfname belongs to, and records the answer if both are
@@ -81,41 +46,18 @@ namespace TestApp
             if (alreadyAnswered)
                 return false;
 
+            Guid id = Guid.NewGuid();
             db.TestAnswers.Add(new TestAnswer
             {
-                Id = Guid.NewGuid(),
+                Id = id,
                 TestAfnameId = testAfnameId,
                 TestQuestionId = testQuestion.Id,
                 AnswerId = answerId.Value
             });
 
-            RecordSyncHelper.TouchRecordTimestamp(db, "testAntwoorden", new[] { testAfnameId.ToString(), testQuestion.Id.ToString() });
+            RecordSyncHelper.TouchRecordTimestamp(db, "testAntwoorden", id.ToString());
             db.SaveChanges();
             return true;
-        }
-
-        private static Guid FindOrCreateSyncAfname(AppDbContext db, Guid testId, Guid spelerId)
-        {
-            TestAfname? afname = db.TestAfnamen
-                .Where(x => x.TestId == testId && x.SpelerId == spelerId)
-                .OrderByDescending(x => x.Starttijd)
-                .FirstOrDefault();
-
-            if (afname != null)
-                return afname.Id;
-
-            afname = new TestAfname
-            {
-                Id = Guid.NewGuid(),
-                TestId = testId,
-                SpelerId = spelerId,
-                Starttijd = DateTime.Now,
-                Eindtijd = DateTime.Now
-            };
-
-            db.TestAfnamen.Add(afname);
-            db.SaveChanges();
-            return afname.Id;
         }
 
         public bool TryAddTestAntwoord(Guid testAfnameId, string opdracht, string question, string antwoord)
@@ -144,45 +86,59 @@ namespace TestApp
                 .ToList();
         }
 
-        public string GetTestAntwoordenInfo()
-        {
-            List<List<string>> appTestAntwoorden = GetAllTestAntwoorden();
-            return JsonSerializer.Serialize(appTestAntwoorden);
-        }
-
         public void SaveTestAntwoorden()
         {
             // Persisted directly on each mutating operation.
         }
 
-        public void UpdateFromApi(string data, long? remoteTimestamp = null)
+        public List<TestAnswerSyncDto> GetForSync()
         {
-            List<List<string>> rows = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(data) ?? new();
-
             using AppDbContext db = new();
-            using var transaction = db.Database.BeginTransaction();
-
-            foreach (List<string> row in rows)
+            List<TestAnswerSyncDto> rows = db.TestAnswers.AsNoTracking().Select(x => new TestAnswerSyncDto
             {
-                if (row.Count < 5)
+                Id = x.Id,
+                TestAfnameId = x.TestAfnameId,
+                TestQuestionId = x.TestQuestionId,
+                AnswerId = x.AnswerId
+            }).ToList();
+
+            foreach (TestAnswerSyncDto row in rows)
+                row.UpdatedAtUtc = RecordSyncHelper.GetRecordTimestamp(db, "testAntwoorden", row.Id.ToString()) ?? 0;
+
+            return rows;
+        }
+
+        public void ApplyFromSync(List<TestAnswerSyncDto> rows)
+        {
+            using AppDbContext db = new();
+
+            foreach (TestAnswerSyncDto row in rows)
+            {
+                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "testAntwoorden", row.Id.ToString(), row.UpdatedAtUtc))
                     continue;
 
-                string[] keyParts = { row[0], row[1], row[2], row[3], row[4] };
-                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "testAntwoorden", keyParts, remoteTimestamp))
-                    continue;
+                TestAnswer? existing = db.TestAnswers.Find(row.Id);
+                if (existing == null)
+                {
+                    db.TestAnswers.Add(new TestAnswer
+                    {
+                        Id = row.Id,
+                        TestAfnameId = row.TestAfnameId,
+                        TestQuestionId = row.TestQuestionId,
+                        AnswerId = row.AnswerId
+                    });
+                }
+                else
+                {
+                    existing.TestAfnameId = row.TestAfnameId;
+                    existing.TestQuestionId = row.TestQuestionId;
+                    existing.AnswerId = row.AnswerId;
+                }
 
-                Guid testId = EnsureTestId(db, row[0]);
-                Guid spelerId = EnsurePlayerId(db, row[1]);
-                Guid testAfnameId = FindOrCreateSyncAfname(db, testId, spelerId);
-
-                TryAddCore(db, testAfnameId, row[2], row[3], row[4]);
-
-                RecordSyncHelper.TouchRecordTimestamp(db, "testAntwoorden", keyParts, remoteTimestamp);
+                RecordSyncHelper.TouchRecordTimestamp(db, "testAntwoorden", row.Id.ToString(), row.UpdatedAtUtc);
             }
 
             db.SaveChanges();
-            transaction.Commit();
         }
-
     }
 }

@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -100,14 +99,15 @@ namespace TestApp
                 return;
 
             Guid questionId = EnsureQuestionId(db, opdracht, question);
+            Guid id = Guid.NewGuid();
             db.TestQuestions.Add(new TestQuestion
             {
-                Id = Guid.NewGuid(),
+                Id = id,
                 TestId = testId,
                 QuestionId = questionId,
                 Order = order
             });
-            RecordSyncHelper.TouchRecordTimestamp(db, "testVragen", new[] { test, opdracht, question, order });
+            RecordSyncHelper.TouchRecordTimestamp(db, "testVragen", id.ToString());
             db.SaveChanges();
         }
 
@@ -136,16 +136,10 @@ namespace TestApp
 
             if (current != null)
             {
+                RecordSyncHelper.TouchRecordTimestamp(db, "testVragen", current.Id.ToString());
                 db.TestQuestions.Remove(current);
-                RecordSyncHelper.TouchRecordTimestamp(db, "testVragen", new[] { vraag[0], vraag[1], vraag[2], vraag[3] });
                 db.SaveChanges();
             }
-        }
-
-        public string GetTestVragenInfo()
-        {
-            List<List<string>> appTestVragen = GetAllTestVragen();
-            return JsonSerializer.Serialize(appTestVragen);
         }
 
         public void SaveTestVragen()
@@ -153,46 +147,54 @@ namespace TestApp
             // Persisted directly on each mutating operation.
         }
 
-        public void UpdateFromApi(string data, long? remoteTimestamp = null)
+        public List<TestQuestionSyncDto> GetForSync()
         {
-            List<List<string>> rows = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(data) ?? new();
-
             using AppDbContext db = new();
-            using var transaction = db.Database.BeginTransaction();
-
-            foreach (List<string> row in rows)
+            List<TestQuestionSyncDto> rows = db.TestQuestions.AsNoTracking().Select(x => new TestQuestionSyncDto
             {
-                if (row.Count < 4)
+                Id = x.Id,
+                TestId = x.TestId,
+                QuestionId = x.QuestionId,
+                Order = x.Order
+            }).ToList();
+
+            foreach (TestQuestionSyncDto row in rows)
+                row.UpdatedAtUtc = RecordSyncHelper.GetRecordTimestamp(db, "testVragen", row.Id.ToString()) ?? 0;
+
+            return rows;
+        }
+
+        public void ApplyFromSync(List<TestQuestionSyncDto> rows)
+        {
+            using AppDbContext db = new();
+
+            foreach (TestQuestionSyncDto row in rows)
+            {
+                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "testVragen", row.Id.ToString(), row.UpdatedAtUtc))
                     continue;
 
-                string[] keyParts = { row[0], row[1], row[2], row[3] };
-                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "testVragen", keyParts, remoteTimestamp))
-                    continue;
-
-                Guid testId = EnsureTestId(db, row[0]);
-                Guid questionId = EnsureQuestionId(db, row[1], row[2]);
-
-                TestQuestion? current = db.TestQuestions.SingleOrDefault(x =>
-                    x.TestId == testId && x.QuestionId == questionId && x.Order == row[3]);
-
-                if (current == null)
+                TestQuestion? existing = db.TestQuestions.Find(row.Id);
+                if (existing == null)
                 {
                     db.TestQuestions.Add(new TestQuestion
                     {
-                        Id = Guid.NewGuid(),
-                        TestId = testId,
-                        QuestionId = questionId,
-                        Order = row[3]
+                        Id = row.Id,
+                        TestId = row.TestId,
+                        QuestionId = row.QuestionId,
+                        Order = row.Order
                     });
                 }
+                else
+                {
+                    existing.TestId = row.TestId;
+                    existing.QuestionId = row.QuestionId;
+                    existing.Order = row.Order;
+                }
 
-                RecordSyncHelper.TouchRecordTimestamp(db, "testVragen", keyParts, remoteTimestamp);
+                RecordSyncHelper.TouchRecordTimestamp(db, "testVragen", row.Id.ToString(), row.UpdatedAtUtc);
             }
 
             db.SaveChanges();
-            transaction.Commit();
         }
-
     }
 }
-

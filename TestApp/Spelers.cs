@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -31,18 +30,14 @@ namespace TestApp
         public void AddSpeler(string name)
         {
             using AppDbContext db = new();
+            Guid id = Guid.NewGuid();
             db.Players.Add(new Player
             {
+                Id = id,
                 Name = name
             });
-            RecordSyncHelper.TouchRecordTimestamp(db, "spelers", new[] { name });
+            RecordSyncHelper.TouchRecordTimestamp(db, "spelers", id.ToString());
             db.SaveChanges();
-        }
-
-        public string GetSpelersInfo()
-        {
-            List<string> appSpelers = GetSpelers();
-            return JsonSerializer.Serialize(appSpelers);
         }
 
         public void SaveSpelers()
@@ -50,29 +45,40 @@ namespace TestApp
             // Persisted directly on each mutating operation.
         }
 
-        public void UpdateFromApi(string data, long? remoteTimestamp = null)
+        public List<PlayerSyncDto> GetForSync()
         {
-            List<string> values = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(data) ?? new();
-
             using AppDbContext db = new();
-            using var transaction = db.Database.BeginTransaction();
-
-            foreach (string value in values)
+            List<PlayerSyncDto> rows = db.Players.AsNoTracking().Select(x => new PlayerSyncDto
             {
-                string[] keyParts = { value };
-                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "spelers", keyParts, remoteTimestamp))
+                Id = x.Id,
+                Name = x.Name
+            }).ToList();
+
+            foreach (PlayerSyncDto row in rows)
+                row.UpdatedAtUtc = RecordSyncHelper.GetRecordTimestamp(db, "spelers", row.Id.ToString()) ?? 0;
+
+            return rows;
+        }
+
+        public void ApplyFromSync(List<PlayerSyncDto> rows)
+        {
+            using AppDbContext db = new();
+
+            foreach (PlayerSyncDto row in rows)
+            {
+                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "spelers", row.Id.ToString(), row.UpdatedAtUtc))
                     continue;
 
-                if (!db.Players.Any(x => x.Name == value))
-                    db.Players.Add(new Player { Name = value });
+                Player? existing = db.Players.Find(row.Id);
+                if (existing == null)
+                    db.Players.Add(new Player { Id = row.Id, Name = row.Name });
+                else
+                    existing.Name = row.Name;
 
-                RecordSyncHelper.TouchRecordTimestamp(db, "spelers", keyParts, remoteTimestamp);
+                RecordSyncHelper.TouchRecordTimestamp(db, "spelers", row.Id.ToString(), row.UpdatedAtUtc);
             }
 
             db.SaveChanges();
-            transaction.Commit();
         }
-
     }
 }
-

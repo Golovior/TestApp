@@ -1,12 +1,12 @@
-﻿namespace TestApp
+namespace TestApp
 {
     internal interface IGameStore
     {
         bool GameAlreadyExists(string name);
         List<string> GetAllGames();
         void AddGame(string name);
-        string GetGameInfo();
-        void UpdateFromApi(string data, long? remoteTimestamp = null);
+        List<GameSyncDto> GetForSync();
+        void ApplyFromSync(List<GameSyncDto> rows);
     }
 
     internal interface IQuestionStore
@@ -14,8 +14,8 @@
         bool QuestionAlreadyExists(string opdracht, string question);
         List<List<string>> GetAllQuestions();
         void AddQuestion(string opdracht, string question, string alphabetical);
-        string GetQuestionInfo();
-        void UpdateFromApi(string data, long? remoteTimestamp = null);
+        List<QuestionSyncDto> GetForSync();
+        void ApplyFromSync(List<QuestionSyncDto> rows);
     }
 
     internal interface IAnswerStore
@@ -23,18 +23,18 @@
         List<List<string>> GetAntwoorden();
         bool AntwoordAlreadyExists(string opdracht, string vraag, string name);
         void AddAntwoord(string opdracht, string vraag, string name, string correct = "0");
-        string GetAntwoordenInfo();
         void SetAsCorrectAntwoord(string opdracht, string vraag, string name);
         void ConnectPlayersToAnswer(string opdracht, string vraag, string antwoord, List<string> spelers);
-        void UpdateFromApi(string data, long? remoteTimestamp = null);
+        List<AnswerSyncDto> GetForSync();
+        void ApplyFromSync(List<AnswerSyncDto> rows);
     }
 
     internal interface ISettingsStore
     {
         List<string> GetKeys();
         void UpdateSetting(string key, string value);
-        string GetSettingsInfo();
-        void UpdateFromApi(string data, long? remoteTimestamp = null);
+        List<SettingSyncDto> GetForSync();
+        void ApplyFromSync(List<SettingSyncDto> rows);
     }
 
     internal interface ITestsStore
@@ -44,8 +44,8 @@
         void AddTest(string test);
         void SetGameForTest(string test, string? game);
         string? GetGameForTest(string test);
-        string GetTestInfo();
-        void UpdateFromApi(string data, long? remoteTimestamp = null);
+        List<TestSyncDto> GetForSync();
+        void ApplyFromSync(List<TestSyncDto> rows);
     }
 
     internal interface IOpdrachtenStore
@@ -53,8 +53,8 @@
         List<string> GetOpdrachten();
         bool OpdrachtAlreadyExists(string name);
         void AddOpdracht(string name);
-        string GetOpdrachtenInfo();
-        void UpdateFromApi(string data, long? remoteTimestamp = null);
+        List<OpdrachtSyncDto> GetForSync();
+        void ApplyFromSync(List<OpdrachtSyncDto> rows);
     }
 
     internal interface ISpelersStore
@@ -62,8 +62,8 @@
         List<string> GetSpelers();
         bool SpelerAlreadyExists(string name);
         void AddSpeler(string name);
-        string GetSpelersInfo();
-        void UpdateFromApi(string data, long? remoteTimestamp = null);
+        List<PlayerSyncDto> GetForSync();
+        void ApplyFromSync(List<PlayerSyncDto> rows);
     }
 
     internal interface ITestVragenStore
@@ -73,16 +73,16 @@
         List<List<string>> GetAllTestVragen();
         void AddTestVraag(string test, string opdracht, string question, string order);
         void RemoveTestVragen(List<string> vraag);
-        string GetTestVragenInfo();
-        void UpdateFromApi(string data, long? remoteTimestamp = null);
+        List<TestQuestionSyncDto> GetForSync();
+        void ApplyFromSync(List<TestQuestionSyncDto> rows);
     }
 
     internal interface ITestAntwoordenStore
     {
         bool TryAddTestAntwoord(Guid testAfnameId, string opdracht, string question, string antwoord);
         List<List<string>> GetAllTestAntwoorden();
-        string GetTestAntwoordenInfo();
-        void UpdateFromApi(string data, long? remoteTimestamp = null);
+        List<TestAnswerSyncDto> GetForSync();
+        void ApplyFromSync(List<TestAnswerSyncDto> rows);
     }
 
     internal interface ITestAfnameStore
@@ -90,6 +90,8 @@
         Guid StartAfname(string test, string speler);
         void EindeAfname(Guid id);
         List<List<string>> GetAllTestAfnamen();
+        List<TestAfnameSyncDto> GetForSync();
+        void ApplyFromSync(List<TestAfnameSyncDto> rows);
     }
 
     internal interface IGameSpelersStore
@@ -98,5 +100,7 @@
         void AssignSpelerToGame(string game, string speler);
         void RemoveSpelerFromGame(string game, string speler);
         void SetStatus(string game, string speler, string status);
+        List<GameSpelerSyncDto> GetForSync();
+        void ApplyFromSync(List<GameSpelerSyncDto> rows);
     }
 }

@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -41,53 +40,47 @@ namespace TestApp
                 current.Value = value;
             }
 
-            RecordSyncHelper.TouchRecordTimestamp(db, "settings", new[] { key });
+            RecordSyncHelper.TouchRecordTimestamp(db, "settings", key);
 
             db.SaveChanges();
         }
 
-        public string GetSettingsInfo()
+        // Excludes the "SyncRecord:*" bookkeeping rows that RecordSyncHelper itself
+        // writes into this same table - those are sync metadata, not real settings.
+        public List<SettingSyncDto> GetForSync()
         {
             using AppDbContext db = new();
-            List<KeyValuePair<string, string>> pairs = db.Settings
+            List<SettingSyncDto> rows = db.Settings
                 .AsNoTracking()
-                .Select(x => new KeyValuePair<string, string>(x.Key, x.Value))
+                .Where(x => !x.Key.StartsWith("SyncRecord:"))
+                .Select(x => new SettingSyncDto { Key = x.Key, Value = x.Value })
                 .ToList();
-            return JsonSerializer.Serialize(pairs);
+
+            foreach (SettingSyncDto row in rows)
+                row.UpdatedAtUtc = RecordSyncHelper.GetRecordTimestamp(db, "settings", row.Key) ?? 0;
+
+            return rows;
         }
 
-        public void UpdateFromApi(string data, long? remoteTimestamp = null)
+        public void ApplyFromSync(List<SettingSyncDto> rows)
         {
-            List<KeyValuePair<string, string>> pairs = Newtonsoft.Json.JsonConvert.DeserializeObject<List<KeyValuePair<string, string>>>(data) ?? new();
-
             using AppDbContext db = new();
-            using var transaction = db.Database.BeginTransaction();
-            foreach (KeyValuePair<string, string> pair in pairs)
+
+            foreach (SettingSyncDto row in rows)
             {
-                string[] keyParts = { pair.Key };
-                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "settings", keyParts, remoteTimestamp))
+                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "settings", row.Key, row.UpdatedAtUtc))
                     continue;
 
-                SettingEntry? current = db.Settings.SingleOrDefault(x => x.Key == pair.Key);
-                if (current == null)
-                {
-                    db.Settings.Add(new SettingEntry
-                    {
-                        Key = pair.Key,
-                        Value = pair.Value
-                    });
-                }
+                SettingEntry? existing = db.Settings.SingleOrDefault(x => x.Key == row.Key);
+                if (existing == null)
+                    db.Settings.Add(new SettingEntry { Key = row.Key, Value = row.Value });
                 else
-                {
-                    current.Value = pair.Value;
-                }
+                    existing.Value = row.Value;
 
-                RecordSyncHelper.TouchRecordTimestamp(db, "settings", keyParts, remoteTimestamp);
+                RecordSyncHelper.TouchRecordTimestamp(db, "settings", row.Key, row.UpdatedAtUtc);
             }
 
             db.SaveChanges();
-            transaction.Commit();
         }
-
     }
 }
