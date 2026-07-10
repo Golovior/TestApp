@@ -15,7 +15,7 @@ namespace TestApp
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
             AppDatabaseInitializer.Initialize();
-            Application.Run(new Main());
+            Application.Run(new ShellForm());
         }
 
         public static DataSetClass GetInfo()
