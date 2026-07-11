@@ -16,6 +16,8 @@ namespace TestApp
             EnsureGameSpelersTableExists(db);
             EnsureTestsHaveGameIdColumn(db);
             EnsurePlayersStatusColumnRemoved(db);
+            EnsureDeletedColumnsExist(db);
+            EnsureFilteredUniqueIndexes(db);
 
             SettingEntry? marker = db.Settings.Find(LegacyImportCompletedKey);
             if (marker == null)
@@ -156,6 +158,48 @@ namespace TestApp
         {
             if (TableHasColumn(db, "Players", "Status"))
                 db.Database.ExecuteSqlRaw(@"ALTER TABLE ""Players"" DROP COLUMN ""Status"";");
+        }
+
+        // Soft-delete support: every domain table (everything except Settings, which is
+        // app config / sync bookkeeping rather than a user-facing record) gets a Deleted
+        // flag. NOT NULL DEFAULT 0 means every existing row becomes "not deleted" for free.
+        private static readonly string[] DeletableTables =
+        {
+            "Games", "Opdrachten", "Questions", "Answers", "Tests",
+            "TestQuestions", "Players", "GameSpelers", "TestAfname", "TestAnswers"
+        };
+
+        private static void EnsureDeletedColumnsExist(AppDbContext db)
+        {
+            foreach (string table in DeletableTables)
+            {
+                if (!TableHasColumn(db, table, "Deleted"))
+                    db.Database.ExecuteSqlRaw($@"ALTER TABLE ""{table}"" ADD COLUMN ""Deleted"" INTEGER NOT NULL DEFAULT 0;");
+            }
+        }
+
+        // These indexes were plain unique indexes before soft-delete existed, so on an
+        // upgraded install the old (non-filtered) index is still physically present and
+        // would block re-adding a row with the same key as a deleted one. Dropping and
+        // recreating as a filtered index is idempotent, so it's safe to run every startup.
+        private static void EnsureFilteredUniqueIndexes(AppDbContext db)
+        {
+            (string indexName, string table, string columns)[] indexes =
+            {
+                ("IX_Games_Name", "Games", "\"Name\""),
+                ("IX_Tests_Name", "Tests", "\"Name\""),
+                ("IX_Questions_OpdrachtId_Text", "Questions", "\"OpdrachtId\", \"Text\""),
+                ("IX_Answers_QuestionId_Name", "Answers", "\"QuestionId\", \"Name\""),
+                ("IX_TestQuestions_TestId_QuestionId_Order", "TestQuestions", "\"TestId\", \"QuestionId\", \"Order\""),
+                ("IX_GameSpelers_GameId_SpelerId", "GameSpelers", "\"GameId\", \"SpelerId\""),
+                ("IX_TestAnswers_TestAfnameId_TestQuestionId", "TestAnswers", "\"TestAfnameId\", \"TestQuestionId\"")
+            };
+
+            foreach ((string indexName, string table, string columns) in indexes)
+            {
+                db.Database.ExecuteSqlRaw($@"DROP INDEX IF EXISTS ""{indexName}"";");
+                db.Database.ExecuteSqlRaw($@"CREATE UNIQUE INDEX IF NOT EXISTS ""{indexName}"" ON ""{table}"" ({columns}) WHERE ""Deleted"" = 0;");
+            }
         }
     }
 }

@@ -9,6 +9,7 @@ namespace TestApp
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = "";
+        public bool Deleted { get; set; }
         public long UpdatedAtUtc { get; set; }
     }
 
@@ -24,6 +25,7 @@ namespace TestApp
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = "";
+        public bool Deleted { get; set; }
         public long UpdatedAtUtc { get; set; }
     }
 
@@ -33,6 +35,7 @@ namespace TestApp
         public Guid OpdrachtId { get; set; }
         public string Text { get; set; } = "";
         public string Alphabetical { get; set; } = "";
+        public bool Deleted { get; set; }
         public long UpdatedAtUtc { get; set; }
     }
 
@@ -45,6 +48,7 @@ namespace TestApp
         // Still player *names* (not ids) - matches ConnectPlayersToAnswer's
         // existing on-disk representation, out of scope for this redesign.
         public string ConnectedPlayersJson { get; set; } = "[]";
+        public bool Deleted { get; set; }
         public long UpdatedAtUtc { get; set; }
     }
 
@@ -53,6 +57,7 @@ namespace TestApp
         public Guid Id { get; set; }
         public string Name { get; set; } = "";
         public Guid? GameId { get; set; }
+        public bool Deleted { get; set; }
         public long UpdatedAtUtc { get; set; }
     }
 
@@ -62,6 +67,7 @@ namespace TestApp
         public Guid TestId { get; set; }
         public Guid QuestionId { get; set; }
         public string Order { get; set; } = "";
+        public bool Deleted { get; set; }
         public long UpdatedAtUtc { get; set; }
     }
 
@@ -69,6 +75,7 @@ namespace TestApp
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = "";
+        public bool Deleted { get; set; }
         public long UpdatedAtUtc { get; set; }
     }
 
@@ -78,6 +85,7 @@ namespace TestApp
         public Guid GameId { get; set; }
         public Guid SpelerId { get; set; }
         public string Status { get; set; } = "1";
+        public bool Deleted { get; set; }
         public long UpdatedAtUtc { get; set; }
     }
 
@@ -89,6 +97,7 @@ namespace TestApp
         public DateTime Starttijd { get; set; }
         public DateTime? Eindtijd { get; set; }
         public int? Jokers { get; set; }
+        public bool Deleted { get; set; }
         public long UpdatedAtUtc { get; set; }
     }
 
@@ -98,6 +107,7 @@ namespace TestApp
         public Guid TestAfnameId { get; set; }
         public Guid TestQuestionId { get; set; }
         public Guid AnswerId { get; set; }
+        public bool Deleted { get; set; }
         public long UpdatedAtUtc { get; set; }
     }
 

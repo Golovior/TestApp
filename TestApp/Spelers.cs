@@ -40,6 +40,17 @@ namespace TestApp
             db.SaveChanges();
         }
 
+        public void DeleteSpeler(string name)
+        {
+            using AppDbContext db = new();
+            Player? entity = db.Players.SingleOrDefault(x => x.Name == name);
+            if (entity == null)
+                return;
+
+            SoftDeleteHelper.Player(db, entity.Id, RecordSyncHelper.GetCurrentUnixTimeSeconds());
+            db.SaveChanges();
+        }
+
         public void SaveSpelers()
         {
             // Persisted directly on each mutating operation.
@@ -48,10 +59,11 @@ namespace TestApp
         public List<PlayerSyncDto> GetForSync()
         {
             using AppDbContext db = new();
-            List<PlayerSyncDto> rows = db.Players.AsNoTracking().Select(x => new PlayerSyncDto
+            List<PlayerSyncDto> rows = db.Players.IgnoreQueryFilters().AsNoTracking().Select(x => new PlayerSyncDto
             {
                 Id = x.Id,
-                Name = x.Name
+                Name = x.Name,
+                Deleted = x.Deleted
             }).ToList();
 
             foreach (PlayerSyncDto row in rows)
@@ -69,11 +81,14 @@ namespace TestApp
                 if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "spelers", row.Id.ToString(), row.UpdatedAtUtc))
                     continue;
 
-                Player? existing = db.Players.Find(row.Id);
+                Player? existing = db.Players.IgnoreQueryFilters().SingleOrDefault(x => x.Id == row.Id);
                 if (existing == null)
-                    db.Players.Add(new Player { Id = row.Id, Name = row.Name });
+                    db.Players.Add(new Player { Id = row.Id, Name = row.Name, Deleted = row.Deleted });
                 else
+                {
                     existing.Name = row.Name;
+                    existing.Deleted = row.Deleted;
+                }
 
                 RecordSyncHelper.TouchRecordTimestamp(db, "spelers", row.Id.ToString(), row.UpdatedAtUtc);
             }

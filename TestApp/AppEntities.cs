@@ -4,6 +4,7 @@
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public bool Deleted { get; set; }
         public List<Test> Tests { get; set; } = new();
         public List<GameSpeler> GameSpelers { get; set; } = new();
     }
@@ -21,6 +22,7 @@
         public Opdracht Opdracht { get; set; } = null!;
         public string Text { get; set; } = string.Empty;
         public string Alphabetical { get; set; } = string.Empty;
+        public bool Deleted { get; set; }
         public List<Answer> Answers { get; set; } = new();
         public List<TestQuestion> TestQuestions { get; set; } = new();
     }
@@ -33,6 +35,7 @@
         public string Name { get; set; } = string.Empty;
         public bool IsCorrect { get; set; }
         public string ConnectedPlayersJson { get; set; } = "[]";
+        public bool Deleted { get; set; }
         public List<TestAnswer> TestAnswers { get; set; } = new();
     }
 
@@ -42,6 +45,7 @@
         public string Name { get; set; } = string.Empty;
         public Guid? GameId { get; set; }
         public Game? Game { get; set; }
+        public bool Deleted { get; set; }
         public List<TestQuestion> TestQuestions { get; set; } = new();
         public List<TestAfname> TestAfnamen { get; set; } = new();
     }
@@ -54,6 +58,7 @@
         public Guid SpelerId { get; set; }
         public Player Speler { get; set; } = null!;
         public string Status { get; set; } = "1";
+        public bool Deleted { get; set; }
     }
 
     internal class TestAfname
@@ -66,6 +71,7 @@
         public DateTime Starttijd { get; set; }
         public DateTime? Eindtijd { get; set; }
         public int? Jokers { get; set; }
+        public bool Deleted { get; set; }
         public List<TestAnswer> TestAnswers { get; set; } = new();
     }
 
@@ -77,6 +83,7 @@
         public Guid QuestionId { get; set; }
         public Question Question { get; set; } = null!;
         public string Order { get; set; } = string.Empty;
+        public bool Deleted { get; set; }
         public List<TestAnswer> TestAnswers { get; set; } = new();
     }
 
@@ -89,18 +96,21 @@
         public TestQuestion TestQuestion { get; set; } = null!;
         public Guid AnswerId { get; set; }
         public Answer Answer { get; set; } = null!;
+        public bool Deleted { get; set; }
     }
 
     internal class Player
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public bool Deleted { get; set; }
     }
 
     internal class Opdracht
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public bool Deleted { get; set; }
         public List<Question> Questions { get; set; } = new();
     }
 }

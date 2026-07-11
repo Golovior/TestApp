@@ -147,6 +147,25 @@ namespace TestApp
             db.SaveChanges();
         }
 
+        public void DeleteAntwoord(string opdracht, string vraag, string naam)
+        {
+            using AppDbContext db = new();
+            Guid? questionId = db.Questions
+                .Where(x => x.Opdracht.Name == opdracht && x.Text == vraag)
+                .Select(x => (Guid?)x.Id)
+                .SingleOrDefault();
+
+            if (!questionId.HasValue)
+                return;
+
+            Answer? entity = db.Answers.SingleOrDefault(x => x.QuestionId == questionId.Value && x.Name == naam);
+            if (entity == null)
+                return;
+
+            SoftDeleteHelper.Answer(db, entity.Id, RecordSyncHelper.GetCurrentUnixTimeSeconds());
+            db.SaveChanges();
+        }
+
         public void SaveAntwoorden()
         {
             // Persisted directly on each mutating operation.
@@ -155,13 +174,14 @@ namespace TestApp
         public List<AnswerSyncDto> GetForSync()
         {
             using AppDbContext db = new();
-            List<AnswerSyncDto> rows = db.Answers.AsNoTracking().Select(x => new AnswerSyncDto
+            List<AnswerSyncDto> rows = db.Answers.IgnoreQueryFilters().AsNoTracking().Select(x => new AnswerSyncDto
             {
                 Id = x.Id,
                 QuestionId = x.QuestionId,
                 Name = x.Name,
                 IsCorrect = x.IsCorrect,
-                ConnectedPlayersJson = x.ConnectedPlayersJson
+                ConnectedPlayersJson = x.ConnectedPlayersJson,
+                Deleted = x.Deleted
             }).ToList();
 
             foreach (AnswerSyncDto row in rows)
@@ -179,7 +199,7 @@ namespace TestApp
                 if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "antwoorden", row.Id.ToString(), row.UpdatedAtUtc))
                     continue;
 
-                Answer? existing = db.Answers.Find(row.Id);
+                Answer? existing = db.Answers.IgnoreQueryFilters().SingleOrDefault(x => x.Id == row.Id);
                 if (existing == null)
                 {
                     db.Answers.Add(new Answer
@@ -188,7 +208,8 @@ namespace TestApp
                         QuestionId = row.QuestionId,
                         Name = row.Name,
                         IsCorrect = row.IsCorrect,
-                        ConnectedPlayersJson = row.ConnectedPlayersJson
+                        ConnectedPlayersJson = row.ConnectedPlayersJson,
+                        Deleted = row.Deleted
                     });
                 }
                 else
@@ -197,6 +218,7 @@ namespace TestApp
                     existing.Name = row.Name;
                     existing.IsCorrect = row.IsCorrect;
                     existing.ConnectedPlayersJson = row.ConnectedPlayersJson;
+                    existing.Deleted = row.Deleted;
                 }
 
                 RecordSyncHelper.TouchRecordTimestamp(db, "antwoorden", row.Id.ToString(), row.UpdatedAtUtc);

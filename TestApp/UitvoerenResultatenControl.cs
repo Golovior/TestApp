@@ -178,12 +178,27 @@ namespace TestApp
             int key = 0;
             foreach (List<string> info in score)
             {
-                Label naam = new() { AutoSize = true, Location = new Point(0, 10 + key * 20), Text = info[0] };
+                string speler = info[0];
+                Label naam = new() { AutoSize = true, Location = new Point(0, 10 + key * 20), Text = speler };
                 Label juist = new() { AutoSize = true, Location = new Point(220, 10 + key * 20), Text = info[1] + " juist" };
                 Label tijd = new() { AutoSize = true, Location = new Point(360, 10 + key * 20), Text = info[2] + " sec" };
+
+                Button remove = new() { Text = "Verwijderen", Location = new Point(460, 6 + key * 20), Size = new Size(100, 23) };
+                remove.Click += (s, e) =>
+                {
+                    if (!UiHelpers.ConfirmDelete($"Alle testresultaten van \"{speler}\" voor deze test verwijderen?"))
+                        return;
+
+                    foreach (List<string> afname in afnamen.Where(a => a[1] == speler))
+                        testAfnamen.DeleteTestAfname(Guid.Parse(afname[5]));
+
+                    OnTestChanged();
+                };
+
                 resultatenPanel.Controls.Add(naam);
                 resultatenPanel.Controls.Add(juist);
                 resultatenPanel.Controls.Add(tijd);
+                resultatenPanel.Controls.Add(remove);
                 key++;
             }
         }
@@ -248,10 +263,23 @@ namespace TestApp
             int key = 0;
             foreach (List<string> i in antwoordenSet)
             {
+                Guid id = Guid.Parse(i[5]);
                 Label vraagLabel = new() { AutoSize = true, Location = new Point(0, 10 + key * 15), Text = i[3] };
                 Label antwoordLabel = new() { AutoSize = true, Location = new Point(361, 10 + key * 15), Text = i[4] };
+
+                Button remove = new() { Text = "X", Location = new Point(560, 8 + key * 15), Size = new Size(29, 20) };
+                remove.Click += (s, e) =>
+                {
+                    if (!UiHelpers.ConfirmDelete($"Antwoord op \"{i[3]}\" van deze speler verwijderen?"))
+                        return;
+
+                    ds.GetTestAntwoordenClass().DeleteTestAntwoord(id);
+                    RefreshAntwoordenVoorSpeler();
+                };
+
                 antwoordenPanel.Controls.Add(vraagLabel);
                 antwoordenPanel.Controls.Add(antwoordLabel);
+                antwoordenPanel.Controls.Add(remove);
                 key++;
             }
         }

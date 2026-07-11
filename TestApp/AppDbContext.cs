@@ -28,7 +28,9 @@ namespace TestApp
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
-                entity.HasIndex(e => e.Name).IsUnique();
+                entity.Property(e => e.Deleted).IsRequired();
+                entity.HasIndex(e => e.Name).IsUnique().HasFilter("\"Deleted\" = 0");
+                entity.HasQueryFilter(e => !e.Deleted);
             });
 
             modelBuilder.Entity<SettingEntry>(entity =>
@@ -44,11 +46,13 @@ namespace TestApp
                 entity.Property(e => e.OpdrachtId).IsRequired();
                 entity.Property(e => e.Text).IsRequired().HasMaxLength(1000);
                 entity.Property(e => e.Alphabetical).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Deleted).IsRequired();
                 entity.HasOne(e => e.Opdracht)
                     .WithMany(o => o.Questions)
                     .HasForeignKey(e => e.OpdrachtId)
                     .OnDelete(DeleteBehavior.Cascade);
-                entity.HasIndex(e => new { e.OpdrachtId, e.Text }).IsUnique();
+                entity.HasIndex(e => new { e.OpdrachtId, e.Text }).IsUnique().HasFilter("\"Deleted\" = 0");
+                entity.HasQueryFilter(e => !e.Deleted);
             });
 
             modelBuilder.Entity<Answer>(entity =>
@@ -57,22 +61,26 @@ namespace TestApp
                 entity.Property(e => e.QuestionId).IsRequired();
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(1000);
                 entity.Property(e => e.ConnectedPlayersJson).IsRequired().HasMaxLength(4000);
+                entity.Property(e => e.Deleted).IsRequired();
                 entity.HasOne(e => e.Question)
                     .WithMany(q => q.Answers)
                     .HasForeignKey(e => e.QuestionId)
                     .OnDelete(DeleteBehavior.Cascade);
-                entity.HasIndex(e => new { e.QuestionId, e.Name }).IsUnique();
+                entity.HasIndex(e => new { e.QuestionId, e.Name }).IsUnique().HasFilter("\"Deleted\" = 0");
+                entity.HasQueryFilter(e => !e.Deleted);
             });
 
             modelBuilder.Entity<Test>(entity =>
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
-                entity.HasIndex(e => e.Name).IsUnique();
+                entity.Property(e => e.Deleted).IsRequired();
+                entity.HasIndex(e => e.Name).IsUnique().HasFilter("\"Deleted\" = 0");
                 entity.HasOne(e => e.Game)
                     .WithMany(g => g.Tests)
                     .HasForeignKey(e => e.GameId)
                     .OnDelete(DeleteBehavior.SetNull);
+                entity.HasQueryFilter(e => !e.Deleted);
             });
 
             modelBuilder.Entity<TestQuestion>(entity =>
@@ -81,6 +89,7 @@ namespace TestApp
                 entity.Property(e => e.TestId).IsRequired();
                 entity.Property(e => e.QuestionId).IsRequired();
                 entity.Property(e => e.Order).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Deleted).IsRequired();
                 entity.HasOne(e => e.Test)
                     .WithMany(t => t.TestQuestions)
                     .HasForeignKey(e => e.TestId)
@@ -89,7 +98,8 @@ namespace TestApp
                     .WithMany(q => q.TestQuestions)
                     .HasForeignKey(e => e.QuestionId)
                     .OnDelete(DeleteBehavior.Cascade);
-                entity.HasIndex(e => new { e.TestId, e.QuestionId, e.Order }).IsUnique();
+                entity.HasIndex(e => new { e.TestId, e.QuestionId, e.Order }).IsUnique().HasFilter("\"Deleted\" = 0");
+                entity.HasQueryFilter(e => !e.Deleted);
             });
 
             modelBuilder.Entity<TestAnswer>(entity =>
@@ -98,6 +108,7 @@ namespace TestApp
                 entity.Property(e => e.TestAfnameId).IsRequired();
                 entity.Property(e => e.TestQuestionId).IsRequired();
                 entity.Property(e => e.AnswerId).IsRequired();
+                entity.Property(e => e.Deleted).IsRequired();
                 entity.HasOne(e => e.TestAfname)
                     .WithMany(a => a.TestAnswers)
                     .HasForeignKey(e => e.TestAfnameId)
@@ -110,7 +121,8 @@ namespace TestApp
                     .WithMany(a => a.TestAnswers)
                     .HasForeignKey(e => e.AnswerId)
                     .OnDelete(DeleteBehavior.Cascade);
-                entity.HasIndex(e => new { e.TestAfnameId, e.TestQuestionId }).IsUnique();
+                entity.HasIndex(e => new { e.TestAfnameId, e.TestQuestionId }).IsUnique().HasFilter("\"Deleted\" = 0");
+                entity.HasQueryFilter(e => !e.Deleted);
             });
 
             modelBuilder.Entity<TestAfname>(entity =>
@@ -120,6 +132,7 @@ namespace TestApp
                 entity.Property(e => e.TestId).IsRequired();
                 entity.Property(e => e.SpelerId).IsRequired();
                 entity.Property(e => e.Starttijd).IsRequired();
+                entity.Property(e => e.Deleted).IsRequired();
                 entity.HasOne(e => e.Test)
                     .WithMany(t => t.TestAfnamen)
                     .HasForeignKey(e => e.TestId)
@@ -128,12 +141,15 @@ namespace TestApp
                     .WithMany()
                     .HasForeignKey(e => e.SpelerId)
                     .OnDelete(DeleteBehavior.Cascade);
+                entity.HasQueryFilter(e => !e.Deleted);
             });
 
             modelBuilder.Entity<Player>(entity =>
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Deleted).IsRequired();
+                entity.HasQueryFilter(e => !e.Deleted);
             });
 
             modelBuilder.Entity<GameSpeler>(entity =>
@@ -142,6 +158,7 @@ namespace TestApp
                 entity.Property(e => e.GameId).IsRequired();
                 entity.Property(e => e.SpelerId).IsRequired();
                 entity.Property(e => e.Status).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.Deleted).IsRequired();
                 entity.HasOne(e => e.Game)
                     .WithMany(g => g.GameSpelers)
                     .HasForeignKey(e => e.GameId)
@@ -150,13 +167,16 @@ namespace TestApp
                     .WithMany()
                     .HasForeignKey(e => e.SpelerId)
                     .OnDelete(DeleteBehavior.Cascade);
-                entity.HasIndex(e => new { e.GameId, e.SpelerId }).IsUnique();
+                entity.HasIndex(e => new { e.GameId, e.SpelerId }).IsUnique().HasFilter("\"Deleted\" = 0");
+                entity.HasQueryFilter(e => !e.Deleted);
             });
 
             modelBuilder.Entity<Opdracht>(entity =>
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Deleted).IsRequired();
+                entity.HasQueryFilter(e => !e.Deleted);
             });
         }
     }

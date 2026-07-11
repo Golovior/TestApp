@@ -76,6 +76,8 @@ namespace TestApp
             db.SaveChanges();
         }
 
+        // Row shape: [TestName, SpelerName, Starttijd, Eindtijd, Jokers, Id]. Id is appended
+        // last so every existing positional read (a[0]..a[4]) stays valid.
         public List<List<string>> GetAllTestAfnamen()
         {
             using AppDbContext db = new();
@@ -89,22 +91,31 @@ namespace TestApp
                     x.Speler.Name,
                     x.Starttijd.ToString("o", CultureInfo.InvariantCulture),
                     x.Eindtijd.HasValue ? x.Eindtijd.Value.ToString("o", CultureInfo.InvariantCulture) : string.Empty,
-                    x.Jokers.HasValue ? x.Jokers.Value.ToString(CultureInfo.InvariantCulture) : string.Empty
+                    x.Jokers.HasValue ? x.Jokers.Value.ToString(CultureInfo.InvariantCulture) : string.Empty,
+                    x.Id.ToString()
                 })
                 .ToList();
+        }
+
+        public void DeleteTestAfname(Guid id)
+        {
+            using AppDbContext db = new();
+            SoftDeleteHelper.TestAfname(db, id, RecordSyncHelper.GetCurrentUnixTimeSeconds());
+            db.SaveChanges();
         }
 
         public List<TestAfnameSyncDto> GetForSync()
         {
             using AppDbContext db = new();
-            List<TestAfnameSyncDto> rows = db.TestAfnamen.AsNoTracking().Select(x => new TestAfnameSyncDto
+            List<TestAfnameSyncDto> rows = db.TestAfnamen.IgnoreQueryFilters().AsNoTracking().Select(x => new TestAfnameSyncDto
             {
                 Id = x.Id,
                 TestId = x.TestId,
                 SpelerId = x.SpelerId,
                 Starttijd = x.Starttijd,
                 Eindtijd = x.Eindtijd,
-                Jokers = x.Jokers
+                Jokers = x.Jokers,
+                Deleted = x.Deleted
             }).ToList();
 
             foreach (TestAfnameSyncDto row in rows)
@@ -122,7 +133,7 @@ namespace TestApp
                 if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "testAfnamen", row.Id.ToString(), row.UpdatedAtUtc))
                     continue;
 
-                TestAfname? existing = db.TestAfnamen.Find(row.Id);
+                TestAfname? existing = db.TestAfnamen.IgnoreQueryFilters().SingleOrDefault(x => x.Id == row.Id);
                 if (existing == null)
                 {
                     db.TestAfnamen.Add(new TestAfname
@@ -132,7 +143,8 @@ namespace TestApp
                         SpelerId = row.SpelerId,
                         Starttijd = row.Starttijd,
                         Eindtijd = row.Eindtijd,
-                        Jokers = row.Jokers
+                        Jokers = row.Jokers,
+                        Deleted = row.Deleted
                     });
                 }
                 else
@@ -142,6 +154,7 @@ namespace TestApp
                     existing.Starttijd = row.Starttijd;
                     existing.Eindtijd = row.Eindtijd;
                     existing.Jokers = row.Jokers;
+                    existing.Deleted = row.Deleted;
                 }
 
                 RecordSyncHelper.TouchRecordTimestamp(db, "testAfnamen", row.Id.ToString(), row.UpdatedAtUtc);

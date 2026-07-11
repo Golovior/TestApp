@@ -86,8 +86,7 @@ namespace TestApp
             GameSpeler? row = db.GameSpelers.FirstOrDefault(x => x.GameId == gameId.Value && x.Speler.Name == speler);
             if (row != null)
             {
-                RecordSyncHelper.TouchRecordTimestamp(db, "gameSpelers", row.Id.ToString());
-                db.GameSpelers.Remove(row);
+                SoftDeleteHelper.GameSpeler(db, row.Id, RecordSyncHelper.GetCurrentUnixTimeSeconds());
                 db.SaveChanges();
             }
         }
@@ -111,12 +110,13 @@ namespace TestApp
         public List<GameSpelerSyncDto> GetForSync()
         {
             using AppDbContext db = new();
-            List<GameSpelerSyncDto> rows = db.GameSpelers.AsNoTracking().Select(x => new GameSpelerSyncDto
+            List<GameSpelerSyncDto> rows = db.GameSpelers.IgnoreQueryFilters().AsNoTracking().Select(x => new GameSpelerSyncDto
             {
                 Id = x.Id,
                 GameId = x.GameId,
                 SpelerId = x.SpelerId,
-                Status = x.Status
+                Status = x.Status,
+                Deleted = x.Deleted
             }).ToList();
 
             foreach (GameSpelerSyncDto row in rows)
@@ -134,7 +134,7 @@ namespace TestApp
                 if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "gameSpelers", row.Id.ToString(), row.UpdatedAtUtc))
                     continue;
 
-                GameSpeler? existing = db.GameSpelers.Find(row.Id);
+                GameSpeler? existing = db.GameSpelers.IgnoreQueryFilters().SingleOrDefault(x => x.Id == row.Id);
                 if (existing == null)
                 {
                     db.GameSpelers.Add(new GameSpeler
@@ -142,7 +142,8 @@ namespace TestApp
                         Id = row.Id,
                         GameId = row.GameId,
                         SpelerId = row.SpelerId,
-                        Status = row.Status
+                        Status = row.Status,
+                        Deleted = row.Deleted
                     });
                 }
                 else
@@ -150,6 +151,7 @@ namespace TestApp
                     existing.GameId = row.GameId;
                     existing.SpelerId = row.SpelerId;
                     existing.Status = row.Status;
+                    existing.Deleted = row.Deleted;
                 }
 
                 RecordSyncHelper.TouchRecordTimestamp(db, "gameSpelers", row.Id.ToString(), row.UpdatedAtUtc);

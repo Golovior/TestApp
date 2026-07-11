@@ -136,8 +136,7 @@ namespace TestApp
 
             if (current != null)
             {
-                RecordSyncHelper.TouchRecordTimestamp(db, "testVragen", current.Id.ToString());
-                db.TestQuestions.Remove(current);
+                SoftDeleteHelper.TestQuestion(db, current.Id, RecordSyncHelper.GetCurrentUnixTimeSeconds());
                 db.SaveChanges();
             }
         }
@@ -150,12 +149,13 @@ namespace TestApp
         public List<TestQuestionSyncDto> GetForSync()
         {
             using AppDbContext db = new();
-            List<TestQuestionSyncDto> rows = db.TestQuestions.AsNoTracking().Select(x => new TestQuestionSyncDto
+            List<TestQuestionSyncDto> rows = db.TestQuestions.IgnoreQueryFilters().AsNoTracking().Select(x => new TestQuestionSyncDto
             {
                 Id = x.Id,
                 TestId = x.TestId,
                 QuestionId = x.QuestionId,
-                Order = x.Order
+                Order = x.Order,
+                Deleted = x.Deleted
             }).ToList();
 
             foreach (TestQuestionSyncDto row in rows)
@@ -173,7 +173,7 @@ namespace TestApp
                 if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "testVragen", row.Id.ToString(), row.UpdatedAtUtc))
                     continue;
 
-                TestQuestion? existing = db.TestQuestions.Find(row.Id);
+                TestQuestion? existing = db.TestQuestions.IgnoreQueryFilters().SingleOrDefault(x => x.Id == row.Id);
                 if (existing == null)
                 {
                     db.TestQuestions.Add(new TestQuestion
@@ -181,7 +181,8 @@ namespace TestApp
                         Id = row.Id,
                         TestId = row.TestId,
                         QuestionId = row.QuestionId,
-                        Order = row.Order
+                        Order = row.Order,
+                        Deleted = row.Deleted
                     });
                 }
                 else
@@ -189,6 +190,7 @@ namespace TestApp
                     existing.TestId = row.TestId;
                     existing.QuestionId = row.QuestionId;
                     existing.Order = row.Order;
+                    existing.Deleted = row.Deleted;
                 }
 
                 RecordSyncHelper.TouchRecordTimestamp(db, "testVragen", row.Id.ToString(), row.UpdatedAtUtc);

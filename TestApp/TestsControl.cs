@@ -66,6 +66,22 @@ namespace TestApp
             testCombo = new ComboBox { Location = new Point(90, 9), Size = new Size(260, 23), DropDownStyle = ComboBoxStyle.DropDownList };
             testCombo.SelectedIndexChanged += (s, e) => OnTestChanged();
 
+            Button deleteTestButton = new() { Text = "Verwijderen", Location = new Point(670, 44), Size = new Size(100, 23) };
+            deleteTestButton.Click += (s, e) =>
+            {
+                string test = testCombo.Text;
+                if (test == "")
+                    return;
+
+                if (!UiHelpers.ConfirmDelete($"Test \"{test}\" en alle bijbehorende testvragen verwijderen?"))
+                    return;
+
+                ds.GetTestsClass().DeleteTest(test);
+                RefreshTestCombo();
+                testCombo.Text = "";
+                OnTestChanged();
+            };
+
             Label linkLabel = new() { Text = "Gekoppeld spel", Location = new Point(360, 12), AutoSize = true };
             linkGameCombo = new ComboBox { Location = new Point(460, 9), Size = new Size(200, 23), DropDownStyle = ComboBoxStyle.DropDownList };
             foreach (string game in ds.GetGamesClass().GetAllGames())
@@ -111,6 +127,7 @@ namespace TestApp
 
             panel.Controls.Add(testLabel);
             panel.Controls.Add(testCombo);
+            panel.Controls.Add(deleteTestButton);
             panel.Controls.Add(linkLabel);
             panel.Controls.Add(linkGameCombo);
             panel.Controls.Add(linkButton);
@@ -373,6 +390,9 @@ namespace TestApp
                 MessageBox.Show("Deze test is al afgenomen en kan niet meer aangepast worden.");
                 return;
             }
+
+            if (!UiHelpers.ConfirmDelete($"Vraag \"{label.Text}\" uit deze test verwijderen?"))
+                return;
 
             List<List<string>> testvragen = ds.GetTestVragenClass().GetAllTestVragen();
             foreach (List<string> tv in testvragen)

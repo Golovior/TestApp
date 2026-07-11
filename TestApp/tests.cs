@@ -61,6 +61,17 @@ namespace TestApp
                 .FirstOrDefault();
         }
 
+        public void DeleteTest(string test)
+        {
+            using AppDbContext db = new();
+            Test? entity = db.Tests.SingleOrDefault(x => x.Name == test);
+            if (entity == null)
+                return;
+
+            SoftDeleteHelper.Test(db, entity.Id, RecordSyncHelper.GetCurrentUnixTimeSeconds());
+            db.SaveChanges();
+        }
+
         public void SaveTests()
         {
             // Persisted directly on each mutating operation.
@@ -69,11 +80,12 @@ namespace TestApp
         public List<TestSyncDto> GetForSync()
         {
             using AppDbContext db = new();
-            List<TestSyncDto> rows = db.Tests.AsNoTracking().Select(x => new TestSyncDto
+            List<TestSyncDto> rows = db.Tests.IgnoreQueryFilters().AsNoTracking().Select(x => new TestSyncDto
             {
                 Id = x.Id,
                 Name = x.Name,
-                GameId = x.GameId
+                GameId = x.GameId,
+                Deleted = x.Deleted
             }).ToList();
 
             foreach (TestSyncDto row in rows)
@@ -91,13 +103,14 @@ namespace TestApp
                 if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "tests", row.Id.ToString(), row.UpdatedAtUtc))
                     continue;
 
-                Test? existing = db.Tests.Find(row.Id);
+                Test? existing = db.Tests.IgnoreQueryFilters().SingleOrDefault(x => x.Id == row.Id);
                 if (existing == null)
-                    db.Tests.Add(new Test { Id = row.Id, Name = row.Name, GameId = row.GameId });
+                    db.Tests.Add(new Test { Id = row.Id, Name = row.Name, GameId = row.GameId, Deleted = row.Deleted });
                 else
                 {
                     existing.Name = row.Name;
                     existing.GameId = row.GameId;
+                    existing.Deleted = row.Deleted;
                 }
 
                 RecordSyncHelper.TouchRecordTimestamp(db, "tests", row.Id.ToString(), row.UpdatedAtUtc);

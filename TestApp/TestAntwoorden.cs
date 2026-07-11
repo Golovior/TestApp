@@ -66,6 +66,8 @@ namespace TestApp
             return TryAddCore(db, testAfnameId, opdracht, question, antwoord);
         }
 
+        // Row shape: [TestName, SpelerName, OpdrachtName, QuestionText, AnswerName, Id].
+        // Id is appended last so every existing positional read (a[0]..a[4]) stays valid.
         public List<List<string>> GetAllTestAntwoorden()
         {
             using AppDbContext db = new();
@@ -81,9 +83,17 @@ namespace TestApp
                     x.TestAfname.Speler.Name,
                     x.TestQuestion.Question.Opdracht.Name,
                     x.TestQuestion.Question.Text,
-                    x.Answer.Name
+                    x.Answer.Name,
+                    x.Id.ToString()
                 })
                 .ToList();
+        }
+
+        public void DeleteTestAntwoord(Guid id)
+        {
+            using AppDbContext db = new();
+            SoftDeleteHelper.TestAnswer(db, id, RecordSyncHelper.GetCurrentUnixTimeSeconds());
+            db.SaveChanges();
         }
 
         public void SaveTestAntwoorden()
@@ -94,12 +104,13 @@ namespace TestApp
         public List<TestAnswerSyncDto> GetForSync()
         {
             using AppDbContext db = new();
-            List<TestAnswerSyncDto> rows = db.TestAnswers.AsNoTracking().Select(x => new TestAnswerSyncDto
+            List<TestAnswerSyncDto> rows = db.TestAnswers.IgnoreQueryFilters().AsNoTracking().Select(x => new TestAnswerSyncDto
             {
                 Id = x.Id,
                 TestAfnameId = x.TestAfnameId,
                 TestQuestionId = x.TestQuestionId,
-                AnswerId = x.AnswerId
+                AnswerId = x.AnswerId,
+                Deleted = x.Deleted
             }).ToList();
 
             foreach (TestAnswerSyncDto row in rows)
@@ -117,7 +128,7 @@ namespace TestApp
                 if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "testAntwoorden", row.Id.ToString(), row.UpdatedAtUtc))
                     continue;
 
-                TestAnswer? existing = db.TestAnswers.Find(row.Id);
+                TestAnswer? existing = db.TestAnswers.IgnoreQueryFilters().SingleOrDefault(x => x.Id == row.Id);
                 if (existing == null)
                 {
                     db.TestAnswers.Add(new TestAnswer
@@ -125,7 +136,8 @@ namespace TestApp
                         Id = row.Id,
                         TestAfnameId = row.TestAfnameId,
                         TestQuestionId = row.TestQuestionId,
-                        AnswerId = row.AnswerId
+                        AnswerId = row.AnswerId,
+                        Deleted = row.Deleted
                     });
                 }
                 else
@@ -133,6 +145,7 @@ namespace TestApp
                     existing.TestAfnameId = row.TestAfnameId;
                     existing.TestQuestionId = row.TestQuestionId;
                     existing.AnswerId = row.AnswerId;
+                    existing.Deleted = row.Deleted;
                 }
 
                 RecordSyncHelper.TouchRecordTimestamp(db, "testAntwoorden", row.Id.ToString(), row.UpdatedAtUtc);

@@ -5,6 +5,7 @@ namespace TestApp
         bool GameAlreadyExists(string name);
         List<string> GetAllGames();
         void AddGame(string name);
+        void DeleteGame(string name);
         List<GameSyncDto> GetForSync();
         void ApplyFromSync(List<GameSyncDto> rows);
     }
@@ -14,6 +15,7 @@ namespace TestApp
         bool QuestionAlreadyExists(string opdracht, string question);
         List<List<string>> GetAllQuestions();
         void AddQuestion(string opdracht, string question, string alphabetical);
+        void DeleteQuestion(string opdracht, string question);
         List<QuestionSyncDto> GetForSync();
         void ApplyFromSync(List<QuestionSyncDto> rows);
     }
@@ -25,6 +27,7 @@ namespace TestApp
         void AddAntwoord(string opdracht, string vraag, string name, string correct = "0");
         void SetAsCorrectAntwoord(string opdracht, string vraag, string name);
         void ConnectPlayersToAnswer(string opdracht, string vraag, string antwoord, List<string> spelers);
+        void DeleteAntwoord(string opdracht, string vraag, string naam);
         List<AnswerSyncDto> GetForSync();
         void ApplyFromSync(List<AnswerSyncDto> rows);
     }
@@ -44,6 +47,7 @@ namespace TestApp
         void AddTest(string test);
         void SetGameForTest(string test, string? game);
         string? GetGameForTest(string test);
+        void DeleteTest(string test);
         List<TestSyncDto> GetForSync();
         void ApplyFromSync(List<TestSyncDto> rows);
     }
@@ -53,6 +57,7 @@ namespace TestApp
         List<string> GetOpdrachten();
         bool OpdrachtAlreadyExists(string name);
         void AddOpdracht(string name);
+        void DeleteOpdracht(string name);
         List<OpdrachtSyncDto> GetForSync();
         void ApplyFromSync(List<OpdrachtSyncDto> rows);
     }
@@ -62,6 +67,7 @@ namespace TestApp
         List<string> GetSpelers();
         bool SpelerAlreadyExists(string name);
         void AddSpeler(string name);
+        void DeleteSpeler(string name);
         List<PlayerSyncDto> GetForSync();
         void ApplyFromSync(List<PlayerSyncDto> rows);
     }
@@ -81,6 +87,7 @@ namespace TestApp
     {
         bool TryAddTestAntwoord(Guid testAfnameId, string opdracht, string question, string antwoord);
         List<List<string>> GetAllTestAntwoorden();
+        void DeleteTestAntwoord(Guid id);
         List<TestAnswerSyncDto> GetForSync();
         void ApplyFromSync(List<TestAnswerSyncDto> rows);
     }
@@ -90,6 +97,7 @@ namespace TestApp
         Guid StartAfname(string test, string speler);
         void EindeAfname(Guid id);
         List<List<string>> GetAllTestAfnamen();
+        void DeleteTestAfname(Guid id);
         List<TestAfnameSyncDto> GetForSync();
         void ApplyFromSync(List<TestAfnameSyncDto> rows);
     }

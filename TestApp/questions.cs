@@ -66,6 +66,21 @@ namespace TestApp
             db.SaveChanges();
         }
 
+        public void DeleteQuestion(string opdracht, string question)
+        {
+            using AppDbContext db = new();
+            Guid? opdrachtId = db.Opdrachten.Where(x => x.Name == opdracht).Select(x => (Guid?)x.Id).SingleOrDefault();
+            if (!opdrachtId.HasValue)
+                return;
+
+            Question? entity = db.Questions.SingleOrDefault(x => x.OpdrachtId == opdrachtId.Value && x.Text == question);
+            if (entity == null)
+                return;
+
+            SoftDeleteHelper.Question(db, entity.Id, RecordSyncHelper.GetCurrentUnixTimeSeconds());
+            db.SaveChanges();
+        }
+
         public void SaveQuestions()
         {
             // Persisted directly on each mutating operation.
@@ -74,12 +89,13 @@ namespace TestApp
         public List<QuestionSyncDto> GetForSync()
         {
             using AppDbContext db = new();
-            List<QuestionSyncDto> rows = db.Questions.AsNoTracking().Select(x => new QuestionSyncDto
+            List<QuestionSyncDto> rows = db.Questions.IgnoreQueryFilters().AsNoTracking().Select(x => new QuestionSyncDto
             {
                 Id = x.Id,
                 OpdrachtId = x.OpdrachtId,
                 Text = x.Text,
-                Alphabetical = x.Alphabetical
+                Alphabetical = x.Alphabetical,
+                Deleted = x.Deleted
             }).ToList();
 
             foreach (QuestionSyncDto row in rows)
@@ -97,7 +113,7 @@ namespace TestApp
                 if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "questions", row.Id.ToString(), row.UpdatedAtUtc))
                     continue;
 
-                Question? existing = db.Questions.Find(row.Id);
+                Question? existing = db.Questions.IgnoreQueryFilters().SingleOrDefault(x => x.Id == row.Id);
                 if (existing == null)
                 {
                     db.Questions.Add(new Question
@@ -105,7 +121,8 @@ namespace TestApp
                         Id = row.Id,
                         OpdrachtId = row.OpdrachtId,
                         Text = row.Text,
-                        Alphabetical = row.Alphabetical
+                        Alphabetical = row.Alphabetical,
+                        Deleted = row.Deleted
                     });
                 }
                 else
@@ -113,6 +130,7 @@ namespace TestApp
                     existing.OpdrachtId = row.OpdrachtId;
                     existing.Text = row.Text;
                     existing.Alphabetical = row.Alphabetical;
+                    existing.Deleted = row.Deleted;
                 }
 
                 RecordSyncHelper.TouchRecordTimestamp(db, "questions", row.Id.ToString(), row.UpdatedAtUtc);
