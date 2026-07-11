@@ -132,6 +132,13 @@ namespace TestApp
             {
                 this.Dispose();
                 this.prev.Show();
+
+                // Rebuilds the Resultaten page from scratch (deselected test dropdown, no
+                // results shown yet) instead of leaving the stale pre-test instance in place -
+                // the user reselects the test to see the just-saved results.
+                if (this.saveResult && this.prev is ShellForm shellForm)
+                    shellForm.ShowSection(Section.UitvoerenResultaten);
+
                 return;
             }
 
