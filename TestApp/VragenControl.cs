@@ -460,7 +460,7 @@ namespace TestApp
                     continue;
 
                 List<string> connected = antwoord[4].Length > 4
-                    ? Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(antwoord[4]) ?? new()
+                    ? System.Text.Json.JsonSerializer.Deserialize<List<string>>(antwoord[4]) ?? new()
                     : new();
 
                 if (antwoord[2] == selectedAntwoord)

@@ -63,7 +63,7 @@ namespace TestApp
 
                     if (connectedPlayersRaw.Length > 4)
                     {
-                        List<string> pqo = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(connectedPlayersRaw) ?? new();
+                        List<string> pqo = System.Text.Json.JsonSerializer.Deserialize<List<string>>(connectedPlayersRaw) ?? new();
 
                         bool answerNeeded = false;
 
@@ -262,7 +262,7 @@ namespace TestApp
 
                     if (connectedPlayersRaw.Length > 4)
                     {
-                        List<string> pqo = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(connectedPlayersRaw) ?? new();
+                        List<string> pqo = System.Text.Json.JsonSerializer.Deserialize<List<string>>(connectedPlayersRaw) ?? new();
 
                         bool answerNeeded = false;
 

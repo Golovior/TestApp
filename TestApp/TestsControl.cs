@@ -497,7 +497,7 @@ namespace TestApp
 
                     if (antwoord[4].Length > 4)
                     {
-                        List<string> pqo = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(antwoord[4]) ?? new();
+                        List<string> pqo = System.Text.Json.JsonSerializer.Deserialize<List<string>>(antwoord[4]) ?? new();
                         playersForQuestionOptions.AddRange(pqo);
                     }
                 }

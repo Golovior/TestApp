@@ -171,11 +171,16 @@ namespace TestApp
 
         private static void EnsureDeletedColumnsExist(AppDbContext db)
         {
+            // EF1002: the only interpolated value is the table name, drawn from the
+            // hardcoded DeletableTables list - never user input - and SQL identifiers
+            // (table names) cannot be passed as parameters, so ExecuteSql doesn't apply.
+#pragma warning disable EF1002
             foreach (string table in DeletableTables)
             {
                 if (!TableHasColumn(db, table, "Deleted"))
                     db.Database.ExecuteSqlRaw($@"ALTER TABLE ""{table}"" ADD COLUMN ""Deleted"" INTEGER NOT NULL DEFAULT 0;");
             }
+#pragma warning restore EF1002
         }
 
         // These indexes were plain unique indexes before soft-delete existed, so on an
@@ -195,11 +200,15 @@ namespace TestApp
                 ("IX_TestAnswers_TestAfnameId_TestQuestionId", "TestAnswers", "\"TestAfnameId\", \"TestQuestionId\"")
             };
 
+            // EF1002: index/table/column names are hardcoded schema identifiers from the
+            // array above, never user input, and SQL identifiers cannot be parameterized.
+#pragma warning disable EF1002
             foreach ((string indexName, string table, string columns) in indexes)
             {
                 db.Database.ExecuteSqlRaw($@"DROP INDEX IF EXISTS ""{indexName}"";");
                 db.Database.ExecuteSqlRaw($@"CREATE UNIQUE INDEX IF NOT EXISTS ""{indexName}"" ON ""{table}"" ({columns}) WHERE ""Deleted"" = 0;");
             }
+#pragma warning restore EF1002
         }
     }
 }
