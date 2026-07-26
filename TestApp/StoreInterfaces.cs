@@ -15,6 +15,7 @@ namespace TestApp
         bool QuestionAlreadyExists(string opdracht, string question);
         List<List<string>> GetAllQuestions();
         void AddQuestion(string opdracht, string question, string alphabetical);
+        void SetAlphabetical(string opdracht, string question, string alphabetical);
         void DeleteQuestion(string opdracht, string question);
         List<QuestionSyncDto> GetForSync();
         void ApplyFromSync(List<QuestionSyncDto> rows);

@@ -231,7 +231,7 @@ namespace TestApp
             }
 
             if(alfabetisch == "1")
-                opties.Sort();
+                opties.Sort(NaturalCompare);
 
             int optieId = 0;
             bool twoColumns = false;
@@ -280,6 +280,41 @@ namespace TestApp
 
                 toPutIn.Controls.Add(optieLbl);
             }
+        }
+
+        // "Natural" sort: runs of digits compare numerically (so "2" < "10"),
+        // everything else compares as plain characters. Plain string.Sort()
+        // would put "10" before "2" since it compares character by character.
+        private static int NaturalCompare(string a, string b)
+        {
+            int i = 0, j = 0;
+            while (i < a.Length && j < b.Length)
+            {
+                if (char.IsDigit(a[i]) && char.IsDigit(b[j]))
+                {
+                    int startI = i, startJ = j;
+                    while (i < a.Length && char.IsDigit(a[i])) i++;
+                    while (j < b.Length && char.IsDigit(b[j])) j++;
+
+                    string numA = a.Substring(startI, i - startI).TrimStart('0');
+                    string numB = b.Substring(startJ, j - startJ).TrimStart('0');
+
+                    if (numA.Length != numB.Length)
+                        return numA.Length.CompareTo(numB.Length);
+
+                    int numCmp = string.CompareOrdinal(numA, numB);
+                    if (numCmp != 0)
+                        return numCmp;
+                }
+                else
+                {
+                    if (a[i] != b[j])
+                        return a[i].CompareTo(b[j]);
+                    i++;
+                    j++;
+                }
+            }
+            return (a.Length - i).CompareTo(b.Length - j);
         }
 
         #endregion

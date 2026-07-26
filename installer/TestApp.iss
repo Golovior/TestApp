@@ -10,7 +10,7 @@
 ; Edit the five values below to change branding/version.
 
 #define MyAppName "WIDM Test Applicatie"
-#define MyAppVersion "1.0.2"
+#define MyAppVersion "1.0.3"
 #define MyAppPublisher "F. van den Berg"
 #define MyAppExeName "TestApp.exe"
 ; Publish output, relative to this .iss file. Produced by:

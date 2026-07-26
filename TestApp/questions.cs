@@ -66,6 +66,21 @@ namespace TestApp
             db.SaveChanges();
         }
 
+        public void SetAlphabetical(string opdracht, string question, string alphabetical)
+        {
+            using AppDbContext db = new();
+            Question? entity = db.Questions
+                .Where(x => x.Opdracht.Name == opdracht && x.Text == question)
+                .SingleOrDefault();
+
+            if (entity == null)
+                return;
+
+            entity.Alphabetical = alphabetical;
+            RecordSyncHelper.TouchRecordTimestamp(db, "questions", entity.Id.ToString());
+            db.SaveChanges();
+        }
+
         public void DeleteQuestion(string opdracht, string question)
         {
             using AppDbContext db = new();

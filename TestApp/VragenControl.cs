@@ -14,6 +14,7 @@ namespace TestApp
         private TextBox newVraagBox = null!;
         private CheckBox alfabetischBox = null!;
         private ComboBox vraagCombo = null!;
+        private CheckBox editAlfabetischBox = null!;
 
         private Panel antwoordenPanel = null!;
         private TextBox newAntwoordBox = null!;
@@ -124,9 +125,23 @@ namespace TestApp
                 OnOpdrachtChanged();
             };
 
+            editAlfabetischBox = new CheckBox { Text = "Alfabetisch", Location = new Point(660, 8), AutoSize = true };
+            Button saveAlfabetischButton = new() { Text = "Bijwerken", Location = new Point(770, 5), Size = new Size(100, 23) };
+            saveAlfabetischButton.Click += (s, e) =>
+            {
+                string opdracht = opdrachtCombo.Text;
+                string vraag = vraagCombo.Text;
+                if (opdracht == "" || vraag == "")
+                    return;
+
+                ds.GetQuestionsClass().SetAlphabetical(opdracht, vraag, editAlfabetischBox.Checked ? "1" : "0");
+            };
+
             panel.Controls.Add(vraagLabel);
             panel.Controls.Add(vraagCombo);
             panel.Controls.Add(deleteVraagButton);
+            panel.Controls.Add(editAlfabetischBox);
+            panel.Controls.Add(saveAlfabetischButton);
             return panel;
         }
 
@@ -261,7 +276,16 @@ namespace TestApp
             string opdracht = opdrachtCombo.Text;
             string vraag = vraagCombo.Text;
             if (opdracht == "" || vraag == "")
+            {
+                editAlfabetischBox.Checked = false;
                 return;
+            }
+
+            foreach (List<string> v in ds.GetQuestionsClass().GetAllQuestions())
+            {
+                if (v[0] == opdracht && v[1] == vraag)
+                    editAlfabetischBox.Checked = v[2] == "1";
+            }
 
             int order = 0;
             foreach (List<string> answer in ds.GetAntwoordenClass().GetAntwoorden())
