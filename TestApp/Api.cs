@@ -1,15 +1,16 @@
-﻿using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Net;
 using System.Text;
-using System.Text.Json.Nodes;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace TestApp
 {
     internal class Api
     {
+        private static readonly HttpClient HttpClient = new();
+        private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
+
         readonly string baseUrl;
         readonly DataSetClass ds;
 
@@ -19,32 +20,55 @@ namespace TestApp
             this.ds = ds;
         }
 
-        public async void SaveData()
+        private SyncEnvelope BuildOutgoingEnvelope()
         {
-            HttpClient client = new();
+            return new SyncEnvelope
+            {
+                Games = ds.GetGamesClass().GetForSync(),
+                Settings = ds.GetSettingsClass().GetForSync(),
+                Opdrachten = ds.GetOpdrachtenClass().GetForSync(),
+                Questions = ds.GetQuestionsClass().GetForSync(),
+                Answers = ds.GetAntwoordenClass().GetForSync(),
+                Tests = ds.GetTestsClass().GetForSync(),
+                TestQuestions = ds.GetTestVragenClass().GetForSync(),
+                Players = ds.GetSpelersClass().GetForSync(),
+                GameSpelers = ds.GetGameSpelersClass().GetForSync(),
+                TestAfnamen = ds.GetTestAfnamenClass().GetForSync(),
+                TestAnswers = ds.GetTestAntwoordenClass().GetForSync()
+            };
+        }
 
+        // Parents must be applied before children so foreign keys resolve:
+        // (no deps) -> Questions/Tests -> Answers/TestQuestions/GameSpelers -> TestAfnamen -> TestAnswers.
+        private void ApplyIncomingEnvelope(SyncEnvelope envelope)
+        {
+            ds.GetSettingsClass().ApplyFromSync(envelope.Settings);
+            ds.GetOpdrachtenClass().ApplyFromSync(envelope.Opdrachten);
+            ds.GetGamesClass().ApplyFromSync(envelope.Games);
+            ds.GetSpelersClass().ApplyFromSync(envelope.Players);
+
+            ds.GetQuestionsClass().ApplyFromSync(envelope.Questions);
+            ds.GetTestsClass().ApplyFromSync(envelope.Tests);
+
+            ds.GetAntwoordenClass().ApplyFromSync(envelope.Answers);
+            ds.GetTestVragenClass().ApplyFromSync(envelope.TestQuestions);
+            ds.GetGameSpelersClass().ApplyFromSync(envelope.GameSpelers);
+
+            ds.GetTestAfnamenClass().ApplyFromSync(envelope.TestAfnamen);
+
+            ds.GetTestAntwoordenClass().ApplyFromSync(envelope.TestAnswers);
+        }
+
+        public async Task SaveData()
+        {
             string fullUrl = this.baseUrl + "SyncTestAppData";
 
-            client.BaseAddress = new Uri(this.baseUrl);
+            SyncEnvelope outgoing = BuildOutgoingEnvelope();
+            string content = JsonSerializer.Serialize(outgoing);
 
-            Dictionary<string, string> data = new()
-            {
-                { "games",  ds.GetGamesClass().GetGameInfo()},
-                { "settings",  ds.GetSettingsClass().GetSettingsInfo()},
-                { "tests", ds.GetTestsClass().GetTestInfo()},
-                { "questions", ds.GetQuestionsClass().GetQuestionInfo()},
-                { "antwoorden", ds.GetAntwoordenClass().GetAntwoordenInfo()},
-                { "testVragen", ds.GetTestVragenClass().GetTestVragenInfo()},
-                { "opdrachten", ds.GetOpdrachtenClass().GetOpdrachtenInfo()},
-                { "testAntwoorden", ds.GetTestAntwoordenClass().GetTestAntwoordenInfo()},
-                { "spelers", ds.GetSpelersClass().GetSpelersInfo()}
-            };
+            string filePath = AppStoragePaths.DataDirectory;
+            string fileName = Path.Combine(filePath, "apisending.txt");
 
-            string content = JsonConvert.SerializeObject(data);
-
-            string filePath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "/widmTest";
-            string fileName = filePath + "/apisending.txt";
-            
             if (!File.Exists(fileName))
             {
                 var createdFile = File.Create(fileName);
@@ -53,16 +77,31 @@ namespace TestApp
 
             File.WriteAllText(fileName, content);
 
-            var postData = new StringContent(content,Encoding.UTF8, "application/json");
+            var postData = new StringContent(content, Encoding.UTF8, "application/json");
 
-            var response = await client.PostAsync(fullUrl, postData);
+            string responseString;
 
-            string responseString = await response.Content.ReadAsStringAsync();
+            try
+            {
+                using var cts = new CancellationTokenSource(DefaultTimeout);
+                var response = await HttpClient.PostAsync(fullUrl, postData, cts.Token);
+                response.EnsureSuccessStatusCode();
 
-            if (responseString.StartsWith("Error"))
-                throw new Exception(responseString);
+                responseString = await response.Content.ReadAsStringAsync(cts.Token);
+            }
+            catch (OperationCanceledException ex)
+            {
+                throw new Exception("API sync timed out while sending data.", ex);
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new Exception($"API sync failed: {ex.Message}", ex);
+            }
 
-            string fileNameRecieve = filePath + "/apirecieving.txt";
+            if (responseString.StartsWith("Error", StringComparison.OrdinalIgnoreCase))
+                throw new Exception($"API sync returned an error: {responseString}");
+
+            string fileNameRecieve = Path.Combine(filePath, "apirecieving.txt");
 
             if (!File.Exists(fileNameRecieve))
             {
@@ -72,6 +111,18 @@ namespace TestApp
 
             File.WriteAllText(fileNameRecieve, responseString);
 
+            SyncEnvelope incoming;
+
+            try
+            {
+                incoming = JsonSerializer.Deserialize<SyncEnvelope>(responseString) ?? new();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("API sync returned invalid JSON payload.", ex);
+            }
+
+            ApplyIncomingEnvelope(incoming);
         }
     }
 }

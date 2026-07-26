@@ -1,85 +1,122 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace TestApp
 {
-    internal class Tests
+    internal class Tests : ITestsStore
     {
-        readonly List<string> appTests;
-        readonly string filePath;
-        readonly string fileName;
-
-        public Tests()
-        {
-            this.filePath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "/widmTest";
-            this.fileName = filePath + "/tests.txt";
-
-            if (!Directory.Exists(filePath))
-                Directory.CreateDirectory(filePath);
-
-            if (!File.Exists(fileName))
-            {
-                var createdFile = File.Create(fileName);
-                createdFile.Close();
-            }
-
-            string json = File.ReadAllText(fileName);
-
-            if (json == null)
-            {
-                this.appTests = new();
-                return;
-            }
-
-            this.appTests = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(json) ?? new();
-        }
+        public Tests() { }
 
         public bool TestAlreadyExists(string test)
         {
-            if (appTests.Contains(test))
-                return true;
-
-            return false;
+            using AppDbContext db = new();
+            return db.Tests.Any(x => x.Name.ToLower() == test.ToLower());
         }
 
         public List<string> GetAllTests()
         {
-            return this.appTests;
+            using AppDbContext db = new();
+            return db.Tests
+                .AsNoTracking()
+                .Select(x => x.Name)
+                .OrderBy(x => x)
+                .ToList();
         }
 
         public void AddTest(string test)
         {
-
-            appTests.Add(test);
-
-            this.SaveTests();
+            using AppDbContext db = new();
+            Guid id = Guid.NewGuid();
+            db.Tests.Add(new Test { Id = id, Name = test });
+            RecordSyncHelper.TouchRecordTimestamp(db, "tests", id.ToString());
+            db.SaveChanges();
         }
 
-        public string GetTestInfo()
+        public void SetGameForTest(string test, string? game)
         {
-            string allTests = "[";
+            using AppDbContext db = new();
+            Test? entity = db.Tests.FirstOrDefault(x => x.Name == test);
+            if (entity == null)
+                return;
 
-            foreach (string test in appTests)
-            {
-                if (allTests.Length > 2)
-                    allTests += ",";
+            entity.GameId = string.IsNullOrEmpty(game)
+                ? null
+                : db.Games.Where(x => x.Name == game).Select(x => (Guid?)x.Id).FirstOrDefault();
 
-                allTests += "'" + test + "'";
-            }
+            RecordSyncHelper.TouchRecordTimestamp(db, "tests", entity.Id.ToString());
 
-            allTests += "]";
+            db.SaveChanges();
+        }
 
-            return allTests;
+        public string? GetGameForTest(string test)
+        {
+            using AppDbContext db = new();
+            return db.Tests
+                .Where(x => x.Name == test)
+                .Select(x => x.Game != null ? x.Game.Name : null)
+                .FirstOrDefault();
+        }
+
+        public void DeleteTest(string test)
+        {
+            using AppDbContext db = new();
+            Test? entity = db.Tests.SingleOrDefault(x => x.Name == test);
+            if (entity == null)
+                return;
+
+            SoftDeleteHelper.Test(db, entity.Id, RecordSyncHelper.GetCurrentUnixTimeSeconds());
+            db.SaveChanges();
         }
 
         public void SaveTests()
         {
-            string json = JsonSerializer.Serialize(appTests);
-            File.WriteAllText(fileName, json);
+            // Persisted directly on each mutating operation.
+        }
+
+        public List<TestSyncDto> GetForSync()
+        {
+            using AppDbContext db = new();
+            List<TestSyncDto> rows = db.Tests.IgnoreQueryFilters().AsNoTracking().Select(x => new TestSyncDto
+            {
+                Id = x.Id,
+                Name = x.Name,
+                GameId = x.GameId,
+                Deleted = x.Deleted
+            }).ToList();
+
+            foreach (TestSyncDto row in rows)
+                row.UpdatedAtUtc = RecordSyncHelper.GetRecordTimestamp(db, "tests", row.Id.ToString()) ?? 0;
+
+            return rows;
+        }
+
+        public void ApplyFromSync(List<TestSyncDto> rows)
+        {
+            using AppDbContext db = new();
+
+            foreach (TestSyncDto row in rows)
+            {
+                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "tests", row.Id.ToString(), row.UpdatedAtUtc))
+                    continue;
+
+                Test? existing = db.Tests.IgnoreQueryFilters().SingleOrDefault(x => x.Id == row.Id);
+                if (existing == null)
+                    db.Tests.Add(new Test { Id = row.Id, Name = row.Name, GameId = row.GameId, Deleted = row.Deleted });
+                else
+                {
+                    existing.Name = row.Name;
+                    existing.GameId = row.GameId;
+                    existing.Deleted = row.Deleted;
+                }
+
+                RecordSyncHelper.TouchRecordTimestamp(db, "tests", row.Id.ToString(), row.UpdatedAtUtc);
+            }
+
+            db.SaveChanges();
         }
     }
 }

@@ -41,7 +41,6 @@ namespace TestApp
             textBox1 = new TextBox();
             label4 = new Label();
             label5 = new Label();
-            label6 = new Label();
             SuspendLayout();
             // 
             // button1
@@ -116,6 +115,7 @@ namespace TestApp
             textBox1.Name = "textBox1";
             textBox1.Size = new Size(186, 36);
             textBox1.TabIndex = 3;
+            textBox1.KeyUp += TextBox1_KeyUp;
             // 
             // label4
             // 
@@ -133,24 +133,13 @@ namespace TestApp
             label5.Size = new Size(194, 228);
             label5.TabIndex = 8;
             label5.Visible = false;
-            // 
-            // label6
-            // 
-            label6.AutoSize = true;
-            label6.Location = new Point(12, 426);
-            label6.Name = "label6";
-            label6.Size = new Size(38, 15);
-            label6.TabIndex = 9;
-            label6.Text = "label6";
-            label6.Visible = false;
-            // 
+            //
             // Form20
-            // 
+            //
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.ActiveCaptionText;
             ClientSize = new Size(800, 450);
-            Controls.Add(label6);
             Controls.Add(label5);
             Controls.Add(label4);
             Controls.Add(label1);
@@ -242,7 +231,7 @@ namespace TestApp
             }
 
             if(alfabetisch == "1")
-                opties.Sort();
+                opties.Sort(NaturalCompare);
 
             int optieId = 0;
             bool twoColumns = false;
@@ -285,11 +274,47 @@ namespace TestApp
                 optieLbl.Text = optie;
                 optieLbl.ForeColor = System.Drawing.Color.White;
                 optieLbl.Font = new System.Drawing.Font("Segoe UI", 15.75F, System.Drawing.GraphicsUnit.Point);
+                optieLbl.Click += (s, e) => optieRB.Checked = true;
 
                 antwoordLabels.Add(optieLbl);
 
                 toPutIn.Controls.Add(optieLbl);
             }
+        }
+
+        // "Natural" sort: runs of digits compare numerically (so "2" < "10"),
+        // everything else compares as plain characters. Plain string.Sort()
+        // would put "10" before "2" since it compares character by character.
+        private static int NaturalCompare(string a, string b)
+        {
+            int i = 0, j = 0;
+            while (i < a.Length && j < b.Length)
+            {
+                if (char.IsDigit(a[i]) && char.IsDigit(b[j]))
+                {
+                    int startI = i, startJ = j;
+                    while (i < a.Length && char.IsDigit(a[i])) i++;
+                    while (j < b.Length && char.IsDigit(b[j])) j++;
+
+                    string numA = a.Substring(startI, i - startI).TrimStart('0');
+                    string numB = b.Substring(startJ, j - startJ).TrimStart('0');
+
+                    if (numA.Length != numB.Length)
+                        return numA.Length.CompareTo(numB.Length);
+
+                    int numCmp = string.CompareOrdinal(numA, numB);
+                    if (numCmp != 0)
+                        return numCmp;
+                }
+                else
+                {
+                    if (a[i] != b[j])
+                        return a[i].CompareTo(b[j]);
+                    i++;
+                    j++;
+                }
+            }
+            return (a.Length - i).CompareTo(b.Length - j);
         }
 
         #endregion
@@ -305,6 +330,5 @@ namespace TestApp
         private TextBox textBox1;
         private Label label4;
         private Label label5;
-        private Label label6;
     }
 }

@@ -1,142 +1,230 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace TestApp
 {
-    internal class Antwoorden
+    internal class Antwoorden : IAnswerStore
     {
-        List<List<string>> appAntwoorden;
-        readonly string filePath;
-        readonly string fileName;
+        public Antwoorden() { }
 
-        public Antwoorden()
+        private static Guid EnsureOpdrachtId(AppDbContext db, string opdracht)
         {
-            this.filePath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "/widmTest";
-            this.fileName = filePath + "/antwoorden.txt";
+            Opdracht? existing = db.Opdrachten.SingleOrDefault(x => x.Name == opdracht);
+            if (existing != null)
+                return existing.Id;
 
-            if (!Directory.Exists(filePath))
-                Directory.CreateDirectory(filePath);
+            existing = new Opdracht { Id = Guid.NewGuid(), Name = opdracht };
+            db.Opdrachten.Add(existing);
+            db.SaveChanges();
+            return existing.Id;
+        }
 
-            if (!File.Exists(fileName))
+        private static Guid EnsureQuestionId(AppDbContext db, string opdracht, string vraag)
+        {
+            Guid opdrachtId = EnsureOpdrachtId(db, opdracht);
+            Question? question = db.Questions.SingleOrDefault(x => x.OpdrachtId == opdrachtId && x.Text == vraag);
+            if (question != null)
+                return question.Id;
+
+            question = new Question
             {
-                var createdFile = File.Create(fileName);
-                createdFile.Close();
-            }
-
-            string json = File.ReadAllText(fileName);
-
-            if (json == null)
-            {
-                this.appAntwoorden = new();
-                return;
-            }
-
-            this.appAntwoorden = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(json) ?? new();
+                Id = Guid.NewGuid(),
+                OpdrachtId = opdrachtId,
+                Text = vraag,
+                Alphabetical = vraag
+            };
+            db.Questions.Add(question);
+            db.SaveChanges();
+            return question.Id;
         }
 
         public List<List<string>> GetAntwoorden()
         {
-            return this.appAntwoorden;
+            using AppDbContext db = new();
+            return db.Answers
+                .AsNoTracking()
+                .Include(x => x.Question)
+                .ThenInclude(x => x.Opdracht)
+                .Select(x => new List<string>
+                {
+                    x.Question.Opdracht.Name,
+                    x.Question.Text,
+                    x.Name,
+                    x.IsCorrect ? "1" : "0",
+                    x.ConnectedPlayersJson
+                })
+                .ToList();
         }
 
         public bool AntwoordAlreadyExists(string opdracht, string vraag, string name)
         {
-            foreach (List<string> antwoord in this.appAntwoorden)
-            {
-                if (opdracht != antwoord[0])
-                    continue;
+            using AppDbContext db = new();
+            Guid? questionId = db.Questions
+                .Where(x => x.Opdracht.Name == opdracht && x.Text == vraag)
+                .Select(x => (Guid?)x.Id)
+                .SingleOrDefault();
 
-                if (vraag != antwoord[1])
-                    continue;
+            if (!questionId.HasValue)
+                return false;
 
-                if (name != antwoord[2])
-                    continue;
-
-                return true;
-            }
-
-            return false;
+            return db.Answers.Any(x =>
+                x.QuestionId == questionId.Value
+                && x.Name.ToLower() == name.ToLower());
         }
 
         public void AddAntwoord(string opdracht, string vraag, string name, string correct = "0")
         {
-            List<string> antwoord = new()
+            using AppDbContext db = new();
+            Guid questionId = EnsureQuestionId(db, opdracht, vraag);
+            Guid id = Guid.NewGuid();
+            db.Answers.Add(new Answer
             {
-                opdracht,
-                vraag,
-                name,
-                correct,
-                "[]"
-            };
-
-            appAntwoorden.Add(antwoord);
-
-            this.SaveAntwoorden();
-        }
-
-        public string GetAntwoordenInfo()
-        {
-            string allAntwoorden = "[";
-
-            foreach (List<string> antwoordSet in appAntwoorden)
-            {
-                if (allAntwoorden.Length > 2)
-                    allAntwoorden += ",";
-
-                allAntwoorden+= "['" + antwoordSet[0] + "','" + antwoordSet[1] + "','" + antwoordSet[2] + "','" + antwoordSet[3] + "','" + antwoordSet[4] + "']";
-            }
-
-            allAntwoorden += "]";
-
-            return allAntwoorden;
+                Id = id,
+                QuestionId = questionId,
+                Name = name,
+                IsCorrect = correct == "1",
+                ConnectedPlayersJson = "[]"
+            });
+            RecordSyncHelper.TouchRecordTimestamp(db, "antwoorden", id.ToString());
+            db.SaveChanges();
         }
 
         public void SetAsCorrectAntwoord(string opdracht, string vraag, string name)
         {
-            foreach (List<string> antwoordSet in appAntwoorden)
+            using AppDbContext db = new();
+            using var transaction = db.Database.BeginTransaction();
+
+            Guid? questionId = db.Questions
+                .Where(x => x.Opdracht.Name == opdracht && x.Text == vraag)
+                .Select(x => (Guid?)x.Id)
+                .SingleOrDefault();
+
+            if (!questionId.HasValue)
+                return;
+
+            List<Answer> antwoordSets = db.Answers
+                .Where(x => x.QuestionId == questionId.Value)
+                .ToList();
+
+            foreach (Answer antwoordSet in antwoordSets)
             {
-                if (antwoordSet[0] == opdracht && antwoordSet[1] == vraag)
-                {
-                    if (name == antwoordSet[2])
-                        antwoordSet[3] = "1";
-                    else
-                        antwoordSet[3] = "0";
-                }
+                antwoordSet.IsCorrect = name == antwoordSet.Name;
+                RecordSyncHelper.TouchRecordTimestamp(db, "antwoorden", antwoordSet.Id.ToString());
             }
 
-            SaveAntwoorden();
+            db.SaveChanges();
+            transaction.Commit();
         }
 
         public void ConnectPlayersToAnswer(string opdracht, string vraag, string antwoord, List<string> spelers)
         {
             string connectedPlayers = JsonSerializer.Serialize(spelers);
 
-            foreach (List<string> antwoordSet in appAntwoorden)
+            using AppDbContext db = new();
+            Guid? questionId = db.Questions
+                .Where(x => x.Opdracht.Name == opdracht && x.Text == vraag)
+                .Select(x => (Guid?)x.Id)
+                .SingleOrDefault();
+
+            if (!questionId.HasValue)
+                return;
+
+            Answer? antwoordSet = db.Answers.SingleOrDefault(x =>
+                x.QuestionId == questionId.Value
+                && x.Name == antwoord);
+
+            if (antwoordSet != null)
             {
-                if (antwoordSet[0] == opdracht && antwoordSet[1] == vraag && antwoordSet[2] == antwoord)
-                {
-                    antwoordSet[4] = connectedPlayers;
-                }
+                antwoordSet.ConnectedPlayersJson = connectedPlayers;
+                RecordSyncHelper.TouchRecordTimestamp(db, "antwoorden", antwoordSet.Id.ToString());
             }
 
-            SaveAntwoorden();
+            db.SaveChanges();
+        }
+
+        public void DeleteAntwoord(string opdracht, string vraag, string naam)
+        {
+            using AppDbContext db = new();
+            Guid? questionId = db.Questions
+                .Where(x => x.Opdracht.Name == opdracht && x.Text == vraag)
+                .Select(x => (Guid?)x.Id)
+                .SingleOrDefault();
+
+            if (!questionId.HasValue)
+                return;
+
+            Answer? entity = db.Answers.SingleOrDefault(x => x.QuestionId == questionId.Value && x.Name == naam);
+            if (entity == null)
+                return;
+
+            SoftDeleteHelper.Answer(db, entity.Id, RecordSyncHelper.GetCurrentUnixTimeSeconds());
+            db.SaveChanges();
         }
 
         public void SaveAntwoorden()
         {
-            string json = JsonSerializer.Serialize(appAntwoorden);
-            File.WriteAllText(fileName, json);
+            // Persisted directly on each mutating operation.
         }
 
-        public void UpdateFromApi(string data)
+        public List<AnswerSyncDto> GetForSync()
         {
-            appAntwoorden = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(data) ?? new();
-            File.WriteAllText(fileName, data);
+            using AppDbContext db = new();
+            List<AnswerSyncDto> rows = db.Answers.IgnoreQueryFilters().AsNoTracking().Select(x => new AnswerSyncDto
+            {
+                Id = x.Id,
+                QuestionId = x.QuestionId,
+                Name = x.Name,
+                IsCorrect = x.IsCorrect,
+                ConnectedPlayersJson = x.ConnectedPlayersJson,
+                Deleted = x.Deleted
+            }).ToList();
+
+            foreach (AnswerSyncDto row in rows)
+                row.UpdatedAtUtc = RecordSyncHelper.GetRecordTimestamp(db, "antwoorden", row.Id.ToString()) ?? 0;
+
+            return rows;
+        }
+
+        public void ApplyFromSync(List<AnswerSyncDto> rows)
+        {
+            using AppDbContext db = new();
+
+            foreach (AnswerSyncDto row in rows)
+            {
+                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "antwoorden", row.Id.ToString(), row.UpdatedAtUtc))
+                    continue;
+
+                Answer? existing = db.Answers.IgnoreQueryFilters().SingleOrDefault(x => x.Id == row.Id);
+                if (existing == null)
+                {
+                    db.Answers.Add(new Answer
+                    {
+                        Id = row.Id,
+                        QuestionId = row.QuestionId,
+                        Name = row.Name,
+                        IsCorrect = row.IsCorrect,
+                        ConnectedPlayersJson = row.ConnectedPlayersJson,
+                        Deleted = row.Deleted
+                    });
+                }
+                else
+                {
+                    existing.QuestionId = row.QuestionId;
+                    existing.Name = row.Name;
+                    existing.IsCorrect = row.IsCorrect;
+                    existing.ConnectedPlayersJson = row.ConnectedPlayersJson;
+                    existing.Deleted = row.Deleted;
+                }
+
+                RecordSyncHelper.TouchRecordTimestamp(db, "antwoorden", row.Id.ToString(), row.UpdatedAtUtc);
+            }
+
+            db.SaveChanges();
         }
     }
 }

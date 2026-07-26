@@ -1,85 +1,95 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace TestApp
 {
-    internal class Opdrachten
+    internal class Opdrachten : IOpdrachtenStore
     {
-        readonly List<string> appOpdrachten;
-        readonly string filePath;
-        readonly string fileName;
-
-        public Opdrachten()
-        {
-            this.filePath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "/widmTest";
-            this.fileName = filePath + "/opdrachten.txt";
-
-            if (!Directory.Exists(filePath))
-                Directory.CreateDirectory(filePath);
-
-            if (!File.Exists(fileName))
-            {
-                var createdFile = File.Create(fileName);
-                createdFile.Close();
-            }
-
-            string json = File.ReadAllText(fileName);
-
-            if (json == null)
-            {
-                this.appOpdrachten = new();
-                return;
-            }
-
-            this.appOpdrachten = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(json) ?? new();
-        }
+        public Opdrachten() { }
 
         public List<string> GetOpdrachten()
         {
-            return this.appOpdrachten;
+            using AppDbContext db = new();
+            return db.Opdrachten
+                .AsNoTracking()
+                .Select(x => x.Name)
+                .OrderBy(x => x)
+                .ToList();
         }
 
         public bool OpdrachtAlreadyExists(string name)
         {
-            if (appOpdrachten.Contains(name))
-                return true;
-
-            return false;
+            using AppDbContext db = new();
+            return db.Opdrachten.Any(x => x.Name.ToLower() == name.ToLower());
         }
 
         public void AddOpdracht(string name)
         {
-            appOpdrachten.Add(name);
-
-            this.SaveOpdrachten();
+            using AppDbContext db = new();
+            Guid id = Guid.NewGuid();
+            db.Opdrachten.Add(new Opdracht { Id = id, Name = name });
+            RecordSyncHelper.TouchRecordTimestamp(db, "opdrachten", id.ToString());
+            db.SaveChanges();
         }
 
-        public string GetOpdrachtenInfo()
+        public void DeleteOpdracht(string name)
         {
-            string allOpdachten = "[";
+            using AppDbContext db = new();
+            Opdracht? entity = db.Opdrachten.SingleOrDefault(x => x.Name == name);
+            if (entity == null)
+                return;
 
-            foreach (string opdracht in appOpdrachten)
-            {
-                if (allOpdachten.Length > 2)
-                    allOpdachten += ",";
-
-                allOpdachten += "'" + opdracht + "'";
-            }
-
-            allOpdachten += "]";
-
-            return allOpdachten;
+            SoftDeleteHelper.Opdracht(db, entity.Id, RecordSyncHelper.GetCurrentUnixTimeSeconds());
+            db.SaveChanges();
         }
 
         public void SaveOpdrachten()
         {
-            string json = JsonSerializer.Serialize(appOpdrachten);
-            File.WriteAllText(fileName, json);
+            // Persisted directly on each mutating operation.
         }
 
+        public List<OpdrachtSyncDto> GetForSync()
+        {
+            using AppDbContext db = new();
+            List<OpdrachtSyncDto> rows = db.Opdrachten.IgnoreQueryFilters().AsNoTracking().Select(x => new OpdrachtSyncDto
+            {
+                Id = x.Id,
+                Name = x.Name,
+                Deleted = x.Deleted
+            }).ToList();
+
+            foreach (OpdrachtSyncDto row in rows)
+                row.UpdatedAtUtc = RecordSyncHelper.GetRecordTimestamp(db, "opdrachten", row.Id.ToString()) ?? 0;
+
+            return rows;
+        }
+
+        public void ApplyFromSync(List<OpdrachtSyncDto> rows)
+        {
+            using AppDbContext db = new();
+
+            foreach (OpdrachtSyncDto row in rows)
+            {
+                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "opdrachten", row.Id.ToString(), row.UpdatedAtUtc))
+                    continue;
+
+                Opdracht? existing = db.Opdrachten.IgnoreQueryFilters().SingleOrDefault(x => x.Id == row.Id);
+                if (existing == null)
+                    db.Opdrachten.Add(new Opdracht { Id = row.Id, Name = row.Name, Deleted = row.Deleted });
+                else
+                {
+                    existing.Name = row.Name;
+                    existing.Deleted = row.Deleted;
+                }
+
+                RecordSyncHelper.TouchRecordTimestamp(db, "opdrachten", row.Id.ToString(), row.UpdatedAtUtc);
+            }
+
+            db.SaveChanges();
+        }
     }
 }

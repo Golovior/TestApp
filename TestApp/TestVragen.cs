@@ -1,113 +1,202 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace TestApp
 {
-    internal class TestVragen
+    internal class TestVragen : ITestVragenStore
     {
-        readonly List<List<string>> appTestVragen;
-        readonly string filePath;
-        readonly string fileName;
+        public TestVragen() { }
 
-        public TestVragen()
+        private static Guid EnsureTestId(AppDbContext db, string testName)
         {
-            this.filePath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "/widmTest";
-            this.fileName = filePath + "/testvragen.txt";
+            Test? test = db.Tests.SingleOrDefault(x => x.Name == testName);
+            if (test != null)
+                return test.Id;
 
-            if (!Directory.Exists(filePath))
-                Directory.CreateDirectory(filePath);
+            test = new Test { Id = Guid.NewGuid(), Name = testName };
+            db.Tests.Add(test);
+            db.SaveChanges();
+            return test.Id;
+        }
 
-            if (!File.Exists(fileName))
+        private static Guid EnsureQuestionId(AppDbContext db, string opdracht, string question)
+        {
+            Opdracht? opdrachtEntity = db.Opdrachten.SingleOrDefault(x => x.Name == opdracht);
+            if (opdrachtEntity == null)
             {
-                var createdFile = File.Create(fileName);
-                createdFile.Close();
+                opdrachtEntity = new Opdracht { Id = Guid.NewGuid(), Name = opdracht };
+                db.Opdrachten.Add(opdrachtEntity);
+                db.SaveChanges();
             }
 
-            string json = File.ReadAllText(fileName);
+            Question? questionEntity = db.Questions.SingleOrDefault(x => x.OpdrachtId == opdrachtEntity.Id && x.Text == question);
+            if (questionEntity != null)
+                return questionEntity.Id;
 
-            if (json == null)
+            questionEntity = new Question
             {
-                this.appTestVragen = new();
-                return;
-            }
+                Id = Guid.NewGuid(),
+                OpdrachtId = opdrachtEntity.Id,
+                Text = question,
+                Alphabetical = question
+            };
+            db.Questions.Add(questionEntity);
+            db.SaveChanges();
+            return questionEntity.Id;
+        }
 
-            this.appTestVragen = Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<string>>>(json) ?? new();
+        public bool TestIsAfgenomen(string test)
+        {
+            using AppDbContext db = new();
+            return db.TestAfnamen.Any(x => x.Test.Name == test);
         }
 
         public bool QuestionAlreadyExists(string test, string opdracht, string question)
         {
-            for (int i = 0; i < 50; i++)
-            {
-                List<string> currentQuestionInTest = new()
-                {
-                    test,
-                    opdracht,
-                    question,
-                    Convert.ToString(i)
-                };
+            using AppDbContext db = new();
+            Guid? testId = db.Tests
+                .Where(x => x.Name == test)
+                .Select(x => (Guid?)x.Id)
+                .SingleOrDefault();
 
-                if (appTestVragen.Contains(currentQuestionInTest))
-                    return true;
-            }
+            if (!testId.HasValue)
+                return false;
 
-            return false;
+            return db.TestQuestions.Any(x =>
+                x.TestId == testId.Value
+                && x.Question.Opdracht.Name == opdracht
+                && x.Question.Text == question);
         }
 
         public List<List<string>> GetAllTestVragen()
         {
-            return this.appTestVragen;
+            using AppDbContext db = new();
+            return db.TestQuestions
+                .AsNoTracking()
+                .Include(x => x.Test)
+                .Include(x => x.Question)
+                .ThenInclude(x => x.Opdracht)
+                .Select(x => new List<string>
+                {
+                    x.Test.Name,
+                    x.Question.Opdracht.Name,
+                    x.Question.Text,
+                    x.Order
+                })
+                .ToList();
         }
 
         public void AddTestVraag(string test, string opdracht, string question, string order)
         {
-            List<string> currentTestVraag = new()
+            using AppDbContext db = new();
+            Guid testId = EnsureTestId(db, test);
+
+            if (db.TestAfnamen.Any(x => x.TestId == testId))
+                return;
+
+            Guid questionId = EnsureQuestionId(db, opdracht, question);
+            Guid id = Guid.NewGuid();
+            db.TestQuestions.Add(new TestQuestion
             {
-                test,
-                opdracht,
-                question,
-                order
-            };
-
-            appTestVragen.Add(currentTestVraag);
-
-            this.SaveTestVragen();
+                Id = id,
+                TestId = testId,
+                QuestionId = questionId,
+                Order = order
+            });
+            RecordSyncHelper.TouchRecordTimestamp(db, "testVragen", id.ToString());
+            db.SaveChanges();
         }
 
         public void RemoveTestVragen(List<string> vraag)
         {
-            if(appTestVragen.Contains(vraag))
-                appTestVragen.Remove(vraag);
-        }
+            if (vraag.Count < 4)
+                return;
 
-        public string GetTestVragenInfo()
-        {
-            string allTestVragen = "[";
+            using AppDbContext db = new();
+            Guid? testId = db.Tests
+                .Where(x => x.Name == vraag[0])
+                .Select(x => (Guid?)x.Id)
+                .SingleOrDefault();
 
-            foreach (List<string> testVragen in appTestVragen)
+            if (!testId.HasValue)
+                return;
+
+            if (db.TestAfnamen.Any(x => x.TestId == testId.Value))
+                return;
+
+            TestQuestion? current = db.TestQuestions.FirstOrDefault(x =>
+                x.TestId == testId.Value
+                && x.Question.Opdracht.Name == vraag[1]
+                && x.Question.Text == vraag[2]
+                && x.Order == vraag[3]);
+
+            if (current != null)
             {
-                if (testVragen.Count < 3)
-                    continue;
-
-                if (allTestVragen.Length > 2)
-                    allTestVragen += ",";
-
-                allTestVragen += "['" + testVragen[0] + "','" + testVragen[1] + "','" + testVragen[2] + "','" + testVragen[3] + "']";
+                SoftDeleteHelper.TestQuestion(db, current.Id, RecordSyncHelper.GetCurrentUnixTimeSeconds());
+                db.SaveChanges();
             }
-
-            allTestVragen += "]";
-
-            return allTestVragen;
         }
 
         public void SaveTestVragen()
         {
-            string json = JsonSerializer.Serialize(appTestVragen);
-            File.WriteAllText(fileName, json);
+            // Persisted directly on each mutating operation.
         }
 
+        public List<TestQuestionSyncDto> GetForSync()
+        {
+            using AppDbContext db = new();
+            List<TestQuestionSyncDto> rows = db.TestQuestions.IgnoreQueryFilters().AsNoTracking().Select(x => new TestQuestionSyncDto
+            {
+                Id = x.Id,
+                TestId = x.TestId,
+                QuestionId = x.QuestionId,
+                Order = x.Order,
+                Deleted = x.Deleted
+            }).ToList();
+
+            foreach (TestQuestionSyncDto row in rows)
+                row.UpdatedAtUtc = RecordSyncHelper.GetRecordTimestamp(db, "testVragen", row.Id.ToString()) ?? 0;
+
+            return rows;
+        }
+
+        public void ApplyFromSync(List<TestQuestionSyncDto> rows)
+        {
+            using AppDbContext db = new();
+
+            foreach (TestQuestionSyncDto row in rows)
+            {
+                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "testVragen", row.Id.ToString(), row.UpdatedAtUtc))
+                    continue;
+
+                TestQuestion? existing = db.TestQuestions.IgnoreQueryFilters().SingleOrDefault(x => x.Id == row.Id);
+                if (existing == null)
+                {
+                    db.TestQuestions.Add(new TestQuestion
+                    {
+                        Id = row.Id,
+                        TestId = row.TestId,
+                        QuestionId = row.QuestionId,
+                        Order = row.Order,
+                        Deleted = row.Deleted
+                    });
+                }
+                else
+                {
+                    existing.TestId = row.TestId;
+                    existing.QuestionId = row.QuestionId;
+                    existing.Order = row.Order;
+                    existing.Deleted = row.Deleted;
+                }
+
+                RecordSyncHelper.TouchRecordTimestamp(db, "testVragen", row.Id.ToString(), row.UpdatedAtUtc);
+            }
+
+            db.SaveChanges();
+        }
     }
 }

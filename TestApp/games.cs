@@ -1,77 +1,91 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace TestApp
 {
-    internal class Games
+    internal class Games : IGameStore
     {
-        readonly List<string> appGames;
-        readonly string filePath;
-        readonly string fileName;
-
-        public Games() {
-            this.filePath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "/widmTest";
-            this.fileName = filePath + "/games.txt";
-
-            if (!Directory.Exists(filePath))
-                Directory.CreateDirectory(filePath);
-
-            if (!File.Exists(fileName))
-            {
-                var createdFile = File.Create(fileName);
-                createdFile.Close();
-            }
-
-            string json = File.ReadAllText(fileName);
-
-            if (json == null)
-            {
-                this.appGames = new();
-                return;
-            }
-
-            this.appGames = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(json) ?? new();
-        }
+        public Games() { }
 
         public bool GameAlreadyExists(string name) {
-            if (appGames.Contains(name))
-                return true;
+            using AppDbContext db = new();
+            return db.Games.Any(x => x.Name == name);
+        }
 
-            return false;
+        public List<string> GetAllGames()
+        {
+            using AppDbContext db = new();
+            return db.Games.AsNoTracking().Select(x => x.Name).OrderBy(x => x).ToList();
         }
 
         public void AddGame(string name) {
-            appGames.Add(name);
-
-            this.SaveGames();
+            using AppDbContext db = new();
+            Guid id = Guid.NewGuid();
+            db.Games.Add(new Game { Id = id, Name = name });
+            RecordSyncHelper.TouchRecordTimestamp(db, "games", id.ToString());
+            db.SaveChanges();
         }
 
-        public string GetGameInfo()
+        public void DeleteGame(string name)
         {
-            string allGames = "[";
+            using AppDbContext db = new();
+            Game? entity = db.Games.SingleOrDefault(x => x.Name == name);
+            if (entity == null)
+                return;
 
-            foreach (string game in appGames) {
-                if (allGames.Length > 2)
-                    allGames += ",";
-
-                allGames += "'" + game + "'";
-            }
-
-            allGames += "]";
-
-            return allGames;
+            SoftDeleteHelper.Game(db, entity.Id, RecordSyncHelper.GetCurrentUnixTimeSeconds());
+            db.SaveChanges();
         }
 
         public void SaveGames()
         {
-            string json = JsonSerializer.Serialize(appGames);
-            File.WriteAllText(fileName, json);
+            // Persisted directly on each mutating operation.
         }
 
+        public List<GameSyncDto> GetForSync()
+        {
+            using AppDbContext db = new();
+            List<GameSyncDto> rows = db.Games.IgnoreQueryFilters().AsNoTracking().Select(x => new GameSyncDto
+            {
+                Id = x.Id,
+                Name = x.Name,
+                Deleted = x.Deleted
+            }).ToList();
+
+            foreach (GameSyncDto row in rows)
+                row.UpdatedAtUtc = RecordSyncHelper.GetRecordTimestamp(db, "games", row.Id.ToString()) ?? 0;
+
+            return rows;
+        }
+
+        public void ApplyFromSync(List<GameSyncDto> rows)
+        {
+            using AppDbContext db = new();
+
+            foreach (GameSyncDto row in rows)
+            {
+                if (!RecordSyncHelper.ShouldApplyRemoteRecord(db, "games", row.Id.ToString(), row.UpdatedAtUtc))
+                    continue;
+
+                Game? existing = db.Games.IgnoreQueryFilters().SingleOrDefault(x => x.Id == row.Id);
+                if (existing == null)
+                    db.Games.Add(new Game { Id = row.Id, Name = row.Name, Deleted = row.Deleted });
+                else
+                {
+                    existing.Name = row.Name;
+                    existing.Deleted = row.Deleted;
+                }
+
+                RecordSyncHelper.TouchRecordTimestamp(db, "games", row.Id.ToString(), row.UpdatedAtUtc);
+            }
+
+            db.SaveChanges();
+        }
     }
 }
