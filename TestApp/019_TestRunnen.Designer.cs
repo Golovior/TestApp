@@ -274,6 +274,7 @@ namespace TestApp
                 optieLbl.Text = optie;
                 optieLbl.ForeColor = System.Drawing.Color.White;
                 optieLbl.Font = new System.Drawing.Font("Segoe UI", 15.75F, System.Drawing.GraphicsUnit.Point);
+                optieLbl.Click += (s, e) => optieRB.Checked = true;
 
                 antwoordLabels.Add(optieLbl);
 

@@ -1,4 +1,4 @@
-; Inno Setup script for the WIDM Test Applicatie (.NET 6 WinForms client).
+; Inno Setup script for the WIDM Test Applicatie (.NET 10 WinForms client).
 ;
 ; Packages a self-contained publish (the .NET runtime is bundled, so target
 ; machines need NOTHING pre-installed) into a single setup.exe with Start Menu
@@ -10,7 +10,7 @@
 ; Edit the five values below to change branding/version.
 
 #define MyAppName "WIDM Test Applicatie"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.2"
 #define MyAppPublisher "F. van den Berg"
 #define MyAppExeName "TestApp.exe"
 ; Publish output, relative to this .iss file. Produced by:
@@ -36,8 +36,8 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 ; Self-contained build is 64-bit only.
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 ; Machine-wide install to Program Files needs elevation (prompts UAC once).
 PrivilegesRequired=admin
 ; Offer to close a running instance so files can be replaced during upgrades.

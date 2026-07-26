@@ -151,11 +151,11 @@ namespace TestApp
             opdrachtCombo.SelectedIndexChanged += (s, e) => OnOpdrachtChanged();
 
             Label vraagLabel = new() { Text = "Vraag", Location = new Point(300, 9), AutoSize = true };
-            vraagCombo = new ComboBox { Location = new Point(345, 6), Size = new Size(200, 23), DropDownStyle = ComboBoxStyle.DropDownList };
+            vraagCombo = new ComboBox { Location = new Point(345, 6), Size = new Size(600, 23), DropDownStyle = ComboBoxStyle.DropDownList };
 
-            vragenCountLabel = new Label { Text = "0 vragen toegevoegd", Location = new Point(555, 9), AutoSize = true };
+            vragenCountLabel = new Label { Text = "0 vragen toegevoegd", Location = new Point(955, 9), AutoSize = true };
 
-            Button addButton = new() { Text = "Vraag toevoegen", Location = new Point(700, 5), Size = new Size(140, 23) };
+            Button addButton = new() { Text = "Vraag toevoegen", Location = new Point(1100, 5), Size = new Size(140, 23) };
             addButton.Click += (s, e) => AddVraagToTest();
 
             panel.Controls.Add(opdrachtLabel);
